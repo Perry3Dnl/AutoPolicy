@@ -18,5 +18,9 @@ All notable changes to AutoPolicy will be documented in this file.
 - Centralized alias resolution and added alias-cycle validation.
 - Documented the application integration boundary: AutoPolicy defines and evaluates access while the host owns identities, persistence, and assignments.
 - Added configurable permission-denied behavior with the ASP.NET Core default as the default and an opt-in direct HTTP 403 mode.
+- Hardened wildcard parsing, registry-bound authorization, anonymous-pattern safety, and deny-precedence coverage.
+- Added real Razor Pages integration coverage for automatic discovery, custom routes, Areas, overrides, anonymous pages, and handler gating.
+- Hardened startup validation so conflicting aliases/overrides, invalid alias targets, unknown group references, missing override sources, and registration collisions fail deterministically.
+- Added failure-path coverage for provider exceptions, malformed access snapshots, null provider results, and request cancellation.
 
 `0.1.0` has not been released yet.

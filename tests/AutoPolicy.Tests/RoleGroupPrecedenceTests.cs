@@ -299,7 +299,7 @@ public sealed class RoleGroupPrecedenceTests
     }
 
     [Fact]
-    public void UnknownIncludedGroup_IsWarningNormallyAndErrorInStrictMode()
+    public void UnknownIncludedGroup_IsAlwaysAValidationError()
     {
         var model = new PermissionModel();
         model.DefineGroup("Known", group => group.IncludeGroup("Missing"));
@@ -308,8 +308,7 @@ public sealed class RoleGroupPrecedenceTests
         var normal = PermissionModelValidator.Validate(model, registry, strict: false);
         var strict = PermissionModelValidator.Validate(model, registry, strict: true);
 
-        Assert.Contains(normal.Warnings, warning => warning.Contains("Missing", StringComparison.Ordinal));
-        Assert.DoesNotContain(normal.Errors, error => error.Contains("Missing", StringComparison.Ordinal));
+        Assert.Contains(normal.Errors, error => error.Contains("Missing", StringComparison.Ordinal));
         Assert.Contains(strict.Errors, error => error.Contains("Missing", StringComparison.Ordinal));
     }
 

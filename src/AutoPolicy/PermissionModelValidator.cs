@@ -31,15 +31,7 @@ public static class PermissionModelValidator
             {
                 if (!model.TryGetGroup(included, out _))
                 {
-                    var message = $"Group '{group.Name}' references unknown group '{included}'.";
-                    if (strict)
-                    {
-                        result.AddError(message);
-                    }
-                    else
-                    {
-                        result.AddWarning(message);
-                    }
+                    result.AddError($"Group '{group.Name}' references unknown group '{included}'.");
                 }
             }
 
@@ -54,15 +46,7 @@ public static class PermissionModelValidator
             {
                 if (!model.TryGetGroup(included, out _))
                 {
-                    var message = $"Role '{role.Name}' references unknown group '{included}'.";
-                    if (strict)
-                    {
-                        result.AddError(message);
-                    }
-                    else
-                    {
-                        result.AddWarning(message);
-                    }
+                    result.AddError($"Role '{role.Name}' references unknown group '{included}'.");
                 }
             }
         }
@@ -102,7 +86,7 @@ public static class PermissionModelValidator
             {
                 if (pattern != PermissionPattern.MatchAll && !keys.Any(key => PermissionPattern.Matches(key, pattern)))
                 {
-                    var message = $"{ownerKind} '{ownerName}' pattern '{pattern}' does not match any discovered page.";
+                    var message = $"{ownerKind} '{ownerName}' pattern '{pattern}' does not match any registered permission.";
                     if (strict)
                     {
                         result.AddError(message);
@@ -138,12 +122,12 @@ public static class PermissionModelValidator
             return;
         }
 
-        if (keys.Count == 0 || keys.Contains(normalized))
+        if (keys.Contains(normalized))
         {
             return;
         }
 
-        var message = $"{owner} references stale permission '{normalized}' that does not map to a known page.";
+        var message = $"{owner} references stale permission '{normalized}' that does not map to a registered permission.";
         if (strict)
         {
             result.AddError(message);

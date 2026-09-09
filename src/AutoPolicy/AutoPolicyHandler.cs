@@ -63,6 +63,10 @@ public sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequireme
                 .GetAsync(httpContext, _provider, httpContext.RequestAborted)
                 .ConfigureAwait(false);
         }
+        catch (OperationCanceledException) when (httpContext.RequestAborted.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "IAutoPolicyAccessProvider failed while loading access. Denying the request.");

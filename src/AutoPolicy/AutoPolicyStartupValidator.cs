@@ -29,31 +29,13 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
         _ = _endpointDataSource.Endpoints;
 
         var options = _options.Value;
-        var extraKeys = new List<string>(options.PermissionKeyOverrides.Values);
-        var aliasErrors = new List<string>();
-
-        foreach (var alias in options.Aliases)
-        {
-            try
-            {
-                extraKeys.Add(AutoPolicyPermissionKeyResolver.Resolve(alias.Key, options));
-            }
-            catch (Exception ex)
-            {
-                aliasErrors.Add($"Permission alias '{alias.Key}' is invalid: {ex.Message}");
-            }
-        }
-
         var result = PermissionModelValidator.Validate(
             options.Model,
             _registry,
-            extraKeys,
-            options.StrictValidation);
+            strict: options.StrictValidation);
 
-        foreach (var aliasError in aliasErrors)
-        {
-            result.AddError(aliasError);
-        }
+        ValidateOverrides(options, result);
+        ValidateAliases(options, result);
 
         foreach (var warning in result.Warnings)
         {
@@ -86,4 +68,77 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private void ValidateOverrides(AutoPolicyOptions options, PermissionValidationResult result)
+    {
+        var physicalPages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var registration in _registry.GetAll())
+        {
+            if (!string.IsNullOrWhiteSpace(registration.ViewEnginePath))
+            {
+                physicalPages.Add(GetPhysicalPageKey(registration));
+            }
+        }
+
+        foreach (var permissionOverride in options.PermissionKeyOverrides)
+        {
+            if (!physicalPages.Contains(permissionOverride.Key))
+            {
+                result.AddError(
+                    $"Permission override source '{permissionOverride.Key}' does not map to a discovered Razor Page.");
+                continue;
+            }
+
+            if (!_registry.Contains(permissionOverride.Value))
+            {
+                result.AddError(
+                    $"Permission override '{permissionOverride.Key}' resolves to '{permissionOverride.Value}', "
+                    + "but that canonical permission is not registered.");
+            }
+        }
+    }
+
+    private void ValidateAliases(AutoPolicyOptions options, PermissionValidationResult result)
+    {
+        foreach (var alias in options.Aliases)
+        {
+            if (_registry.Contains(alias.Key))
+            {
+                result.AddError(
+                    $"Permission alias source '{alias.Key}' is already a registered permission. "
+                    + "Use OverridePermissionKey(...) when intentionally remapping a Razor Page permission.");
+                continue;
+            }
+
+            string resolved;
+            try
+            {
+                resolved = AutoPolicyPermissionKeyResolver.Resolve(alias.Key, options);
+            }
+            catch (Exception ex)
+            {
+                result.AddError($"Permission alias '{alias.Key}' is invalid: {ex.Message}");
+                continue;
+            }
+
+            if (!_registry.Contains(resolved))
+            {
+                result.AddError(
+                    $"Permission alias '{alias.Key}' resolves to '{resolved}', which does not resolve to a registered permission.");
+            }
+        }
+    }
+
+    private static string GetPhysicalPageKey(PermissionRegistration registration)
+    {
+        var page = registration.ViewEnginePath!;
+        if (string.IsNullOrWhiteSpace(registration.Area))
+        {
+            return PermissionKey.Normalize(page);
+        }
+
+        var area = registration.Area.Trim('/');
+        var pagePath = page.StartsWith('/') ? page : "/" + page;
+        return PermissionKey.Normalize("/" + area + pagePath);
+    }
 }

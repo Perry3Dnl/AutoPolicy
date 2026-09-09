@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace AutoPolicy;
 
 /// <summary>
@@ -12,6 +14,23 @@ public sealed class AutoPolicyOptions
     private readonly HashSet<string> _explicitPermissions =
         new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly List<string> _anonymousPatterns = [];
+    private readonly Dictionary<string, string> _permissionKeyOverrides =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _aliases =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly IReadOnlyList<string> _anonymousPatternsView;
+    private readonly IReadOnlyDictionary<string, string> _permissionKeyOverridesView;
+    private readonly IReadOnlyDictionary<string, string> _aliasesView;
+
+    public AutoPolicyOptions()
+    {
+        _anonymousPatternsView = _anonymousPatterns.AsReadOnly();
+        _permissionKeyOverridesView = new ReadOnlyDictionary<string, string>(_permissionKeyOverrides);
+        _aliasesView = new ReadOnlyDictionary<string, string>(_aliases);
+    }
+
     public PermissionModel Model { get; } = new();
 
     public bool RazorPagesProtectedByDefault { get; set; } = true;
@@ -24,7 +43,10 @@ public sealed class AutoPolicyOptions
     /// </summary>
     public PermissionDeniedBehavior PermissionDeniedBehavior { get; set; } = PermissionDeniedBehavior.Default;
 
-    public IList<string> AnonymousPatterns { get; } = new List<string>();
+    /// <summary>
+    /// Gets the validated anonymous permission patterns configured through <see cref="AllowAnonymous(string[])"/>.
+    /// </summary>
+    public IReadOnlyList<string> AnonymousPatterns => _anonymousPatternsView;
 
     /// <summary>
     /// Gets explicitly registered non-route permissions, such as permissions used by partials,
@@ -32,11 +54,15 @@ public sealed class AutoPolicyOptions
     /// </summary>
     public IReadOnlyCollection<string> ExplicitPermissions => _explicitPermissions;
 
-    public IDictionary<string, string> PermissionKeyOverrides { get; } =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    /// <summary>
+    /// Gets configured physical-page permission-key overrides.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> PermissionKeyOverrides => _permissionKeyOverridesView;
 
-    public IDictionary<string, string> Aliases { get; } =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    /// <summary>
+    /// Gets configured legacy or alternate permission aliases.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Aliases => _aliasesView;
 
     public AutoPolicyOptions ProtectRazorPagesByDefault(bool enabled = true)
     {
@@ -60,7 +86,7 @@ public sealed class AutoPolicyOptions
                     nameof(patterns));
             }
 
-            AnonymousPatterns.Add(trimmed);
+            _anonymousPatterns.Add(trimmed);
         }
 
         return this;
@@ -109,13 +135,48 @@ public sealed class AutoPolicyOptions
 
     public AutoPolicyOptions OverridePermissionKey(string pagePath, string permissionKey)
     {
-        PermissionKeyOverrides[PermissionKey.Normalize(pagePath)] = PermissionKey.Normalize(permissionKey);
+        var source = PermissionKey.Normalize(pagePath);
+        var target = PermissionKey.Normalize(permissionKey);
+
+        if (_permissionKeyOverrides.TryGetValue(source, out var existing))
+        {
+            if (!PermissionKey.Equals(existing, target))
+            {
+                throw new InvalidOperationException(
+                    $"Permission override '{source}' already maps to '{existing}' and cannot also map to '{target}'.");
+            }
+
+            return this;
+        }
+
+        _permissionKeyOverrides.Add(source, target);
         return this;
     }
 
     public AutoPolicyOptions AddAlias(string alias, string canonicalKey)
     {
-        Aliases[PermissionKey.Normalize(alias)] = PermissionKey.Normalize(canonicalKey);
+        var aliasKey = PermissionKey.Normalize(alias);
+        var target = PermissionKey.Normalize(canonicalKey);
+
+        if (PermissionKey.Equals(aliasKey, target))
+        {
+            throw new ArgumentException(
+                $"Permission alias '{aliasKey}' cannot resolve to itself.",
+                nameof(canonicalKey));
+        }
+
+        if (_aliases.TryGetValue(aliasKey, out var existing))
+        {
+            if (!PermissionKey.Equals(existing, target))
+            {
+                throw new InvalidOperationException(
+                    $"Permission alias '{aliasKey}' already maps to '{existing}' and cannot also map to '{target}'.");
+            }
+
+            return this;
+        }
+
+        _aliases.Add(aliasKey, target);
         return this;
     }
 }
