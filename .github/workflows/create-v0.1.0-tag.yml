@@ -1,0 +1,44 @@
+name: Create v0.1.0 Tag
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/create-v0.1.0-tag.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    name: Create release tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify and create v0.1.0 tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags --quiet
+
+          MAIN_SHA="$(git rev-parse origin/main)"
+          HEAD_SHA="$(git rev-parse HEAD)"
+          if [ "$HEAD_SHA" != "$MAIN_SHA" ]; then
+            echo "Refusing to tag: checkout is not current main."
+            exit 1
+          fi
+
+          if git rev-parse -q --verify "refs/tags/v0.1.0" >/dev/null; then
+            echo "v0.1.0 already exists; nothing to do."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a v0.1.0 -m "AutoPolicy 0.1.0"
+          git push origin v0.1.0
