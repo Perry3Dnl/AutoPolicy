@@ -58,10 +58,13 @@ public sealed class AccessProviderTests
             AllowPermissions = ["/Secure"]
         });
         var evaluator = new PermissionEvaluator(new PermissionModel());
+        var registry = new PermissionRegistry();
+        registry.TryAdd(new PermissionRegistration("/Secure"), "test");
         var options = Options.Create(new AutoPolicyOptions());
         var handler = new AutoPolicyHandler(
             provider,
             evaluator,
+            registry,
             options,
             NullLogger<AutoPolicyHandler>.Instance);
 
