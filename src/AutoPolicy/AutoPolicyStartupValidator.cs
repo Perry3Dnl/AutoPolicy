@@ -29,12 +29,31 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
         _ = _endpointDataSource.Endpoints;
 
         var options = _options.Value;
-        var extraKeys = options.PermissionKeyOverrides.Values.Concat(options.Aliases.Keys);
+        var extraKeys = new List<string>(options.PermissionKeyOverrides.Values);
+        var aliasErrors = new List<string>();
+
+        foreach (var alias in options.Aliases)
+        {
+            try
+            {
+                extraKeys.Add(AutoPolicyPermissionKeyResolver.Resolve(alias.Key, options));
+            }
+            catch (Exception ex)
+            {
+                aliasErrors.Add($"Permission alias '{alias.Key}' is invalid: {ex.Message}");
+            }
+        }
+
         var result = PermissionModelValidator.Validate(
             options.Model,
             _registry,
             extraKeys,
             options.StrictValidation);
+
+        foreach (var aliasError in aliasErrors)
+        {
+            result.AddError(aliasError);
+        }
 
         foreach (var warning in result.Warnings)
         {
@@ -56,9 +75,10 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
 
         var registrations = _registry.GetAll();
         _logger.LogInformation(
-            "AutoPolicy discovered {PageCount} Razor Pages, {ProtectedCount} protected, {DuplicateCount} duplicate keys, {WarningCount} validation warnings.",
+            "AutoPolicy registered {PermissionCount} permissions, {ProtectedPageCount} protected Razor Pages, {ExplicitPermissionCount} explicit capabilities, {DuplicateCount} duplicate keys, {WarningCount} validation warnings.",
             registrations.Count,
             registrations.Count(r => r.IsProtected),
+            options.ExplicitPermissions.Count,
             _registry.Duplicates.Count,
             result.Warnings.Count);
 

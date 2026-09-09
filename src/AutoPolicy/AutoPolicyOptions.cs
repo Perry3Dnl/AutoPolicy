@@ -1,5 +1,12 @@
 namespace AutoPolicy;
 
+/// <summary>
+/// Configures AutoPolicy permission discovery, permission definitions, and evaluation rules.
+/// </summary>
+/// <remarks>
+/// AutoPolicy defines and evaluates permissions. The host application remains responsible for
+/// identities, user accounts, persistence, and assigning roles, groups, or direct permissions.
+/// </remarks>
 public sealed class AutoPolicyOptions
 {
     private readonly HashSet<string> _explicitPermissions =
@@ -10,6 +17,12 @@ public sealed class AutoPolicyOptions
     public bool RazorPagesProtectedByDefault { get; set; } = true;
 
     public bool StrictValidation { get; set; }
+
+    /// <summary>
+    /// Gets or sets how an AutoPolicy forbid is surfaced. The default delegates to the host
+    /// application's normal ASP.NET Core authorization behavior.
+    /// </summary>
+    public PermissionDeniedBehavior PermissionDeniedBehavior { get; set; } = PermissionDeniedBehavior.Default;
 
     public IList<string> AnonymousPatterns { get; } = new List<string>();
 
@@ -44,17 +57,29 @@ public sealed class AutoPolicyOptions
     }
 
     /// <summary>
-    /// Registers one or more permissions that are not discovered from Razor Page routes.
-    /// Explicit permissions participate in roles, groups, wildcard matching, deny-wins evaluation,
-    /// registry diagnostics, and in-page access checks exactly like discovered page permissions.
+    /// Registers one or more concrete permissions that are not discovered from Razor Page routes.
     /// </summary>
+    /// <remarks>
+    /// Use this for partials, page sections, buttons, menu items, and application capabilities that
+    /// require a permission identity of their own. Explicit permissions participate in roles,
+    /// groups, wildcard matching, deny-wins evaluation, registry diagnostics, and in-page checks
+    /// exactly like discovered page permissions.
+    /// </remarks>
     public AutoPolicyOptions DefinePermission(params string[] permissionKeys)
     {
         ArgumentNullException.ThrowIfNull(permissionKeys);
 
         foreach (var permissionKey in permissionKeys)
         {
-            _explicitPermissions.Add(PermissionKey.Normalize(permissionKey));
+            var normalized = PermissionKey.Normalize(permissionKey);
+            if (PermissionPattern.IsWildcard(normalized))
+            {
+                throw new ArgumentException(
+                    $"Explicit permission '{normalized}' must be a concrete permission key, not a wildcard pattern.",
+                    nameof(permissionKeys));
+            }
+
+            _explicitPermissions.Add(normalized);
         }
 
         return this;

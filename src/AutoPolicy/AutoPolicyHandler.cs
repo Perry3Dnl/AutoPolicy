@@ -81,33 +81,28 @@ public sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequireme
         AutoPolicyRequirement requirement,
         out string key)
     {
-        if (!string.IsNullOrWhiteSpace(requirement.PermissionKey))
+        try
         {
-            key = Canonicalize(requirement.PermissionKey);
-            return true;
-        }
+            if (!string.IsNullOrWhiteSpace(requirement.PermissionKey))
+            {
+                key = AutoPolicyPermissionKeyResolver.Resolve(requirement.PermissionKey, _options.Value);
+                return true;
+            }
 
-        var metadata = httpContext.GetEndpoint()?.Metadata.GetMetadata<AutoPolicyMetadata>();
-        if (metadata is not null)
+            var metadata = httpContext.GetEndpoint()?.Metadata.GetMetadata<AutoPolicyMetadata>();
+            if (metadata is not null)
+            {
+                key = AutoPolicyPermissionKeyResolver.Resolve(metadata.Key, _options.Value);
+                return true;
+            }
+        }
+        catch (Exception ex)
         {
-            key = Canonicalize(metadata.Key);
-            return true;
+            _logger.LogError(ex, "AutoPolicy failed to canonicalize the required permission key.");
         }
 
         key = string.Empty;
         return false;
-    }
-
-    private string Canonicalize(string permissionKey)
-    {
-        var normalized = PermissionKey.Normalize(permissionKey);
-        var aliases = _options.Value.Aliases;
-        if (aliases.TryGetValue(normalized, out var canonical))
-        {
-            return canonical;
-        }
-
-        return normalized;
     }
 
     private static HttpContext? ResolveHttpContext(AuthorizationHandlerContext context)
