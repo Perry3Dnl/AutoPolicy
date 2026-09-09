@@ -10,6 +10,8 @@ public static class PermissionPattern
     public static bool IsWildcard(string pattern)
     {
         ArgumentNullException.ThrowIfNull(pattern);
+        Validate(pattern);
+
         var trimmed = pattern.Trim();
         return trimmed == MatchAll || trimmed.EndsWith("/*", StringComparison.Ordinal);
     }
@@ -25,11 +27,18 @@ public static class PermissionPattern
         }
 
         var star = trimmed.IndexOf('*');
-        if (star >= 0 && !trimmed.EndsWith("/*", StringComparison.Ordinal))
+        if (star >= 0)
         {
-            throw new ArgumentException(
-                $"Invalid permission pattern '{pattern}'. Only '*' and trailing '/*' wildcards are supported.",
-                nameof(pattern));
+            var isSingleTrailingWildcard =
+                star == trimmed.Length - 1
+                && trimmed.EndsWith("/*", StringComparison.Ordinal);
+
+            if (!isSingleTrailingWildcard)
+            {
+                throw new ArgumentException(
+                    $"Invalid permission pattern '{pattern}'. Only '*' and a single trailing '/*' wildcard are supported.",
+                    nameof(pattern));
+            }
         }
 
         if (trimmed.EndsWith("/*", StringComparison.Ordinal))
@@ -53,6 +62,8 @@ public static class PermissionPattern
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(permissionKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(pattern);
+
+        Validate(pattern);
 
         var key = PermissionKey.Normalize(permissionKey);
         var trimmed = pattern.Trim();
