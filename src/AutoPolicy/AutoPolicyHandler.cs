@@ -10,17 +10,20 @@ public sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequireme
 {
     private readonly IAutoPolicyAccessProvider _provider;
     private readonly IPermissionEvaluator _evaluator;
+    private readonly IPermissionRegistry _registry;
     private readonly IOptions<AutoPolicyOptions> _options;
     private readonly ILogger<AutoPolicyHandler> _logger;
 
     public AutoPolicyHandler(
         IAutoPolicyAccessProvider provider,
         IPermissionEvaluator evaluator,
+        IPermissionRegistry registry,
         IOptions<AutoPolicyOptions> options,
         ILogger<AutoPolicyHandler> logger)
     {
         _provider = provider;
         _evaluator = evaluator;
+        _registry = registry;
         _options = options;
         _logger = logger;
     }
@@ -40,6 +43,15 @@ public sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequireme
         if (!TryResolvePermissionKey(httpContext, requirement, out var key))
         {
             _logger.LogWarning("Path permission mapping could not be resolved. Denying the request.");
+            context.Fail();
+            return;
+        }
+
+        if (!_registry.Contains(key))
+        {
+            _logger.LogWarning(
+                "AutoPolicy permission {PermissionKey} is not registered. Denying the request.",
+                key);
             context.Fail();
             return;
         }
