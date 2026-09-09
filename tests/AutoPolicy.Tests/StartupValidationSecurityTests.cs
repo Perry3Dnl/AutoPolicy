@@ -42,6 +42,30 @@ public sealed class StartupValidationSecurityTests : IClassFixture<WebApplicatio
     }
 
     [Fact]
+    public void DuplicateGroupDefinition_IsRejectedImmediately()
+    {
+        var options = new AutoPolicyOptions();
+        options.DefineGroup("Staff", group => group.Include("/Probe"));
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => options.DefineGroup("staff", group => group.Include("/Nested/*")));
+
+        Assert.Contains("already been defined", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DuplicateRoleDefinition_IsRejectedImmediately()
+    {
+        var options = new AutoPolicyOptions();
+        options.DefineRole("Admin", role => role.Include("*"));
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => options.DefineRole("ADMIN", role => role.Include("/Probe")));
+
+        Assert.Contains("already been defined", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void SelfReferencingAlias_IsRejectedImmediately()
     {
         var options = new AutoPolicyOptions();

@@ -31,6 +31,7 @@ All notable changes to AutoPolicy are documented in this file.
 - Malformed and ambiguous wildcard patterns are rejected.
 - Bare `AllowAnonymous("*")` is rejected to prevent accidental global exposure.
 - Duplicate canonical page mappings and explicit/page permission collisions fail startup.
+- Duplicate role or group definitions are rejected immediately instead of silently replacing earlier definitions.
 - Missing nested groups, cyclic groups, invalid aliases, alias shadowing, stale alias targets, and invalid page overrides fail startup as appropriate.
 - Provider exceptions, null provider results, malformed provider permission patterns, unresolved mappings, and evaluator failures deny protected access.
 - Request cancellation propagates instead of being converted into an authorization result.

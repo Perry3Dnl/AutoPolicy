@@ -17,10 +17,17 @@ internal sealed class PermissionModel
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(configure);
 
-        var builder = new PermissionGroupBuilder(name.Trim());
+        var normalizedName = name.Trim();
+        if (_groups.ContainsKey(normalizedName))
+        {
+            throw new InvalidOperationException(
+                $"Permission group '{normalizedName}' has already been defined.");
+        }
+
+        var builder = new PermissionGroupBuilder(normalizedName);
         configure(builder);
         var definition = builder.Build();
-        _groups[definition.Name] = definition;
+        _groups.Add(definition.Name, definition);
         return this;
     }
 
@@ -29,10 +36,17 @@ internal sealed class PermissionModel
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(configure);
 
-        var builder = new PermissionRoleBuilder(name.Trim());
+        var normalizedName = name.Trim();
+        if (_roles.ContainsKey(normalizedName))
+        {
+            throw new InvalidOperationException(
+                $"Permission role '{normalizedName}' has already been defined.");
+        }
+
+        var builder = new PermissionRoleBuilder(normalizedName);
         configure(builder);
         var definition = builder.Build();
-        _roles[definition.Name] = definition;
+        _roles.Add(definition.Name, definition);
         return this;
     }
 
