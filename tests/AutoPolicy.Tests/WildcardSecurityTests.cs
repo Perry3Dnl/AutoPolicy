@@ -1,5 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace AutoPolicy.Tests;
@@ -115,6 +118,13 @@ public sealed class WildcardSecurityTests
     }
 
     [Fact]
+    public void AutoPolicyRequirement_RejectsWildcardPermissionKeys()
+    {
+        Assert.Throws<ArgumentException>(() => new AutoPolicyRequirement(PermissionPattern.MatchAll));
+        Assert.Throws<ArgumentException>(() => new AutoPolicyRequirement("/Admin/*"));
+    }
+
+    [Fact]
     public void RoleMatchAll_StillHonorsDirectDeny()
     {
         var model = new PermissionModel();
@@ -174,6 +184,52 @@ public sealed class WildcardSecurityTests
     }
 
     [Fact]
+    public async Task Handler_MatchAllCannotAuthorizeUnknownRequirement()
+    {
+        var provider = new FixedAccessProvider(new AutoPolicyAccess
+        {
+            AllowPermissions = [PermissionPattern.MatchAll]
+        });
+        var registry = new PermissionRegistry();
+        var handler = CreateHandler(provider, registry);
+        var httpContext = new DefaultHttpContext();
+        var requirement = new AutoPolicyRequirement("/NotRegistered");
+        var authorizationContext = new AuthorizationHandlerContext(
+            [requirement],
+            httpContext.User,
+            httpContext);
+
+        await handler.HandleAsync(authorizationContext);
+
+        Assert.False(authorizationContext.HasSucceeded);
+        Assert.Equal(0, provider.CallCount);
+    }
+
+    [Fact]
+    public async Task Handler_MatchAllCanAuthorizeRegisteredRequirement()
+    {
+        const string permission = "/Registered";
+        var provider = new FixedAccessProvider(new AutoPolicyAccess
+        {
+            AllowPermissions = [PermissionPattern.MatchAll]
+        });
+        var registry = new PermissionRegistry();
+        registry.TryAdd(new PermissionRegistration(permission), "test");
+        var handler = CreateHandler(provider, registry);
+        var httpContext = new DefaultHttpContext();
+        var requirement = new AutoPolicyRequirement(permission);
+        var authorizationContext = new AuthorizationHandlerContext(
+            [requirement],
+            httpContext.User,
+            httpContext);
+
+        await handler.HandleAsync(authorizationContext);
+
+        Assert.True(authorizationContext.HasSucceeded);
+        Assert.Equal(1, provider.CallCount);
+    }
+
+    [Fact]
     public async Task InPageMatchAll_OnlyAuthorizesRegisteredCapabilities()
     {
         const string known = "/Features/Permissions/Edit";
@@ -218,6 +274,18 @@ public sealed class WildcardSecurityTests
         var context = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
 
         Assert.False(await context.HasAccessAsync(known));
+    }
+
+    private static AutoPolicyHandler CreateHandler(
+        IAutoPolicyAccessProvider provider,
+        IPermissionRegistry registry)
+    {
+        return new AutoPolicyHandler(
+            provider,
+            new PermissionEvaluator(new PermissionModel()),
+            registry,
+            Options.Create(new AutoPolicyOptions()),
+            NullLogger<AutoPolicyHandler>.Instance);
     }
 
     private sealed class FixedAccessProvider(AutoPolicyAccess access) : IAutoPolicyAccessProvider
