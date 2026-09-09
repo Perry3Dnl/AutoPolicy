@@ -1,6 +1,6 @@
 namespace AutoPolicy;
 
-public sealed class PermissionRegistry : IPermissionRegistry
+internal sealed class PermissionRegistry : IPermissionRegistry
 {
     private readonly Dictionary<string, PermissionRegistration> _entries =
         new(StringComparer.OrdinalIgnoreCase);

@@ -121,7 +121,7 @@ public sealed class DiscoveryIntegrationTests : IClassFixture<WebApplicationFact
     }
 
     [Fact]
-    public async Task GlobalProtectionCanBeExplicitlyDisabled()
+    public async Task GlobalProtectionCanBeDisabled_WhileAttributeStillOptsInSpecificPage()
     {
         using var factory = _factory.WithWebHostBuilder(builder =>
         {
@@ -132,6 +132,11 @@ public sealed class DiscoveryIntegrationTests : IClassFixture<WebApplicationFact
         using var client = factory.CreateClient();
 
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/Nested/Detail")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/OptIn")).StatusCode);
+
+        using var allowed = new HttpRequestMessage(HttpMethod.Get, "/OptIn");
+        allowed.Headers.Add("X-AutoPolicy-Allow", "/OptIn");
+        Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(allowed)).StatusCode);
     }
 
     [Fact]

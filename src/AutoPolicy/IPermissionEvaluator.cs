@@ -1,6 +1,6 @@
 namespace AutoPolicy;
 
-public interface IPermissionEvaluator
+internal interface IPermissionEvaluator
 {
     bool HasAccess(string requiredPermission, AutoPolicyAccess access);
 

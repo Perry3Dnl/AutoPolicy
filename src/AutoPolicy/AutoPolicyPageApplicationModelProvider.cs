@@ -30,8 +30,7 @@ internal sealed class AutoPolicyPageApplicationModelProvider : IPageApplicationM
 
         var allowAnonymous = HasAllowAnonymous(model);
         var publicByConvention = AutoPolicyKeyFactory.MatchesAnonymousPattern(key, options);
-        var optedIn = HasAttribute<AutoPolicyAttribute>(model)
-            || typeof(AutoPolicyPageModel).IsAssignableFrom(model.HandlerType);
+        var optedIn = HasAttribute<AutoPolicyAttribute>(model);
 
         var shouldProtect = (options.RazorPagesProtectedByDefault || optedIn)
             && !allowAnonymous

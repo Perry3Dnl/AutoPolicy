@@ -1,6 +1,6 @@
 namespace AutoPolicy;
 
-public sealed class PermissionValidationResult
+internal sealed class PermissionValidationResult
 {
     public static PermissionValidationResult Success { get; } = new();
 

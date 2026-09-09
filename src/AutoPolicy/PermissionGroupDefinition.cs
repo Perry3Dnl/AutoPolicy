@@ -1,6 +1,6 @@
 namespace AutoPolicy;
 
-public sealed class PermissionGroupDefinition
+internal sealed class PermissionGroupDefinition
 {
     public PermissionGroupDefinition(
         string name,

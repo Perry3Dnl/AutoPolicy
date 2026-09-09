@@ -1,26 +1,45 @@
 # Changelog
 
-All notable changes to AutoPolicy will be documented in this file.
+All notable changes to AutoPolicy are documented in this file.
 
 ## [Unreleased]
 
-- Initial ASP.NET Core authorization implementation is under active development.
-- Added repository build, test, package validation, smoke-test, and release infrastructure.
-- Centralized package version and NuGet metadata in `Directory.Build.props`.
-- Replaced the user-bound access model with request-scoped `AutoPolicyAccess` and `IAutoPolicyAccessProvider` abstractions.
-- Added a built-in claims adapter while keeping custom non-claims access providers supported.
-- Removed the authentication check from the core authorization handler so custom providers can authorize independently of `ClaimsPrincipal` authentication state.
-- Flattened the repository to a conventional .NET layout with root `src`, `tests`, `smoke`, and `scripts` folders plus `AutoPolicy.slnx`.
-- Added explicitly registered non-route permissions for partials, page sections, buttons, menus, and other application capabilities.
-- Added `HasAccessAsync`, `HasAnyAccessAsync`, and effective-permission helpers for Razor Page models and `HttpContext`.
-- Cached the application access snapshot once per HTTP request so route and in-page authorization share the same resolved state.
-- Made unknown in-page permissions fail closed even when a broad wildcard grant would otherwise match.
-- Centralized alias resolution and added alias-cycle validation.
-- Documented the application integration boundary: AutoPolicy defines and evaluates access while the host owns identities, persistence, and assignments.
-- Added configurable permission-denied behavior with the ASP.NET Core default as the default and an opt-in direct HTTP 403 mode.
-- Hardened wildcard parsing, registry-bound authorization, anonymous-pattern safety, and deny-precedence coverage.
-- Added real Razor Pages integration coverage for automatic discovery, custom routes, Areas, overrides, anonymous pages, and handler gating.
-- Hardened startup validation so conflicting aliases/overrides, invalid alias targets, unknown group references, missing override sources, and registration collisions fail deterministically.
-- Added failure-path coverage for provider exceptions, malformed access snapshots, null provider results, and request cancellation.
+## [0.1.0] - 2026-09-09
 
-`0.1.0` has not been released yet.
+### Added
+
+- Automatic ASP.NET Core Razor Page discovery with canonical, route-value-independent permission identities.
+- Default-on Razor Page protection with standard `[AllowAnonymous]` support and validated anonymous permission patterns.
+- `IAutoPolicyAccessProvider` and request-scoped `AutoPolicyAccess` as the application integration boundary.
+- Built-in authenticated-claims adapter plus support for custom database, session, cache, tenant, or API-backed providers.
+- Application-defined roles and nested permission groups.
+- Direct allow and deny roles, groups, and permission patterns with deny-wins evaluation.
+- Exact permission rules, trailing `/*` prefix wildcards, and the `*` match-all rule for registered permissions.
+- Explicit non-route permissions for partials, panels, buttons, menus, tabs, and other application capabilities.
+- `HasAccessAsync`, `HasAnyAccessAsync`, and effective-permission helpers for Razor Page models and `HttpContext`.
+- Request-level caching so route authorization and in-page checks share one resolved access snapshot.
+- Permission-key overrides and alias chains with startup validation.
+- `IPermissionRegistry` diagnostics for discovered and explicitly registered permissions.
+- Configurable permission-denied behavior: ASP.NET Core default or direct HTTP 403 for AutoPolicy forbids.
+- Package build, symbol package, metadata validation, packaged-consumer smoke tests, and tag-gated NuGet Trusted Publishing workflow.
+- GitHub and NuGet documentation covering setup, integration, wildcards, in-page capabilities, claims, diagnostics, and security behavior.
+
+### Security
+
+- Protected pages fail closed when no access is supplied.
+- Unknown permissions cannot become authorized through broad wildcard grants.
+- Malformed and ambiguous wildcard patterns are rejected.
+- Bare `AllowAnonymous("*")` is rejected to prevent accidental global exposure.
+- Duplicate canonical page mappings and explicit/page permission collisions fail startup.
+- Missing nested groups, cyclic groups, invalid aliases, alias shadowing, stale alias targets, and invalid page overrides fail startup as appropriate.
+- Provider exceptions, null provider results, malformed provider permission patterns, unresolved mappings, and evaluator failures deny protected access.
+- Request cancellation propagates instead of being converted into an authorization result.
+- Denies override role, group, direct, wildcard, and match-all grants.
+
+### Packaging
+
+- Targets .NET 10 (`net10.0`).
+- Package ID: `AutoPolicy`.
+- License: MPL-2.0.
+- Includes XML IntelliSense documentation and portable symbol package.
+- Public API surface is intentionally limited to configuration, access-provider integration, diagnostics, and in-page access helpers.

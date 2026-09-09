@@ -1,5 +1,8 @@
 namespace AutoPolicy;
 
+/// <summary>
+/// Builds an application-defined permission role.
+/// </summary>
 public sealed class PermissionRoleBuilder
 {
     internal PermissionRoleBuilder(string name)
@@ -7,12 +10,17 @@ public sealed class PermissionRoleBuilder
         Name = name;
     }
 
-    public string Name { get; }
+    internal string Name { get; }
 
     internal List<string> Patterns { get; } = [];
 
     internal List<string> IncludedGroups { get; } = [];
 
+    /// <summary>
+    /// Adds an exact permission key, a trailing <c>/*</c> prefix pattern, or the <c>*</c> match-all pattern.
+    /// </summary>
+    /// <param name="pattern">The permission pattern granted by the role.</param>
+    /// <returns>The same builder for fluent configuration.</returns>
     public PermissionRoleBuilder Include(string pattern)
     {
         PermissionPattern.Validate(pattern);
@@ -20,6 +28,11 @@ public sealed class PermissionRoleBuilder
         return this;
     }
 
+    /// <summary>
+    /// Includes all permissions contributed by a configured group.
+    /// </summary>
+    /// <param name="groupName">The name of the group to include.</param>
+    /// <returns>The same builder for fluent configuration.</returns>
     public PermissionRoleBuilder IncludeGroup(string groupName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(groupName);

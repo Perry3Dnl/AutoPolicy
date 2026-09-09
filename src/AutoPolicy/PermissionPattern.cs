@@ -1,9 +1,6 @@
 namespace AutoPolicy;
 
-/// <summary>
-/// Exact keys, trailing <c>/*</c> prefix rules, and a single <c>*</c> match-all pattern.
-/// </summary>
-public static class PermissionPattern
+internal static class PermissionPattern
 {
     public const string MatchAll = "*";
 

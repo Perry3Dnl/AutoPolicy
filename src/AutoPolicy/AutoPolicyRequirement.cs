@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace AutoPolicy;
 
-public sealed class AutoPolicyRequirement : IAuthorizationRequirement
+internal sealed class AutoPolicyRequirement : IAuthorizationRequirement
 {
     public AutoPolicyRequirement(string? permissionKey = null)
     {

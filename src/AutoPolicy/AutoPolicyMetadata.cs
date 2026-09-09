@@ -1,6 +1,6 @@
 namespace AutoPolicy;
 
-public sealed class AutoPolicyMetadata
+internal sealed class AutoPolicyMetadata
 {
     public AutoPolicyMetadata(string permissionKey)
     {

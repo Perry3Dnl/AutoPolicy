@@ -2,7 +2,15 @@
 
 Automatic, default-deny route permissions for ASP.NET Core Razor Pages.
 
-AutoPolicy discovers Razor Pages, maps them to canonical permission identities, and evaluates access through ASP.NET Core's standard authorization pipeline. It supports roles, groups, direct grants and denies, explicit non-route capabilities, aliases, anonymous route patterns, and deny-wins evaluation.
+AutoPolicy discovers Razor Pages, maps them to stable permission identities, and evaluates access through ASP.NET Core authorization. Normal pages require no AutoPolicy attributes, policy strings, custom base classes, or injected permission services.
+
+## Install
+
+```bash
+dotnet add package AutoPolicy --version 0.1.0
+```
+
+AutoPolicy `0.1.0` targets .NET 10.
 
 ## Basic setup
 
@@ -13,8 +21,11 @@ builder.Services.AddAutoPolicy(options =>
 {
     options.AllowAnonymous("/Account/Login", "/Error");
 
-    options.DefinePermission(
-        "/Administration/Accounts/AccountPermissions/EditRoles");
+    options.DefineGroup("StaffPages", group =>
+        group.Include("/Staff/*"));
+
+    options.DefineRole("Staff", role =>
+        role.IncludeGroup("StaffPages"));
 });
 
 var app = builder.Build();
@@ -24,39 +35,175 @@ app.MapRazorPages();
 app.Run();
 ```
 
-Most Razor Pages require no AutoPolicy-specific code. Their permission identity is discovered automatically.
+Razor Pages are protected by default. With no grants, protected pages are denied.
+
+A page at:
+
+```text
+Pages/Staff/Members/Detail.cshtml
+```
+
+receives the canonical permission:
+
+```text
+/Staff/Members/Detail
+```
+
+Custom `@page` templates, route values, query strings, and fragments do not change that identity.
 
 ## Bring your own permission storage
 
-AutoPolicy does not manage user accounts, persistence, or assignments. Applications integrate their existing permission system by implementing `IAutoPolicyAccessProvider` and returning an `AutoPolicyAccess` snapshot containing the current request's allow/deny roles, groups, and direct permissions.
+AutoPolicy does not manage users, accounts, persistence, or permission assignments. Implement `IAutoPolicyAccessProvider` to integrate an existing permission system:
 
-The built-in claims provider is only the default adapter; custom providers can load access from session state, a database, Redis, tenant data, or any application-specific source.
+```csharp
+public sealed class ApplicationAccessProvider : IAutoPolicyAccessProvider
+{
+    public async ValueTask<AutoPolicyAccess> GetAccessAsync(
+        HttpContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var stored = await LoadPermissionsAsync(context, cancellationToken);
+        if (stored is null)
+        {
+            return AutoPolicyAccess.Empty;
+        }
 
-## In-page permissions
+        return new AutoPolicyAccess
+        {
+            AllowRoles = stored.AllowRoles,
+            DenyRoles = stored.DenyRoles,
+            AllowGroups = stored.AllowGroups,
+            DenyGroups = stored.DenyGroups,
+            AllowPermissions = stored.AllowPermissions,
+            DenyPermissions = stored.DenyPermissions
+        };
+    }
+}
+```
 
-Partials, panels, buttons, menu items, and operations can have explicit permissions that do not map to a full Razor Page:
+Register it before AutoPolicy:
+
+```csharp
+builder.Services.AddScoped<IAutoPolicyAccessProvider, ApplicationAccessProvider>();
+builder.Services.AddAutoPolicy();
+```
+
+The access snapshot is cached once per HTTP request.
+
+## Roles, groups, and deny-wins
+
+```csharp
+builder.Services.AddAutoPolicy(options =>
+{
+    options.DefinePermission(
+        "/Administration/Accounts/Permissions/EditRoles");
+
+    options.DefineGroup("PermissionEditors", group =>
+        group.Include("/Administration/Accounts/Permissions/EditRoles"));
+
+    options.DefineRole("Admin", role =>
+    {
+        role.IncludeGroup("PermissionEditors");
+        role.Include("/Reports/*");
+    });
+});
+```
+
+The host application returns role/group/direct assignments through `AutoPolicyAccess`. Any matching deny overrides every matching allow.
+
+## Wildcards
+
+Supported permission patterns are intentionally limited:
+
+```text
+/Admin/Users    exact
+/Admin/*        descendants of /Admin
+*               every registered permission
+```
+
+`/Admin/*` does not match `/Admin`, `/Administrator`, or `/Admin2/Users`. Embedded wildcards such as `/Admin/*/Edit`, `/Admin/**`, and `/Admin*` are rejected.
+
+`*` only applies to permissions already present in the registry; it cannot invent an unknown capability.
+
+## Partials and in-page permissions
+
+Register non-route capabilities for partials, panels, menu items, buttons, tabs, or operations:
 
 ```csharp
 options.DefinePermission(
-    "/Administration/Accounts/AccountPermissions/EditRoles");
+    "/Administration/Accounts/Permissions/EditRoles",
+    "/Administration/Accounts/Permissions/ViewHistory");
 ```
 
-Then use the same deny-wins evaluator from Razor:
+Then check them from Razor:
+
+```razor
+@using AutoPolicy
+
+@{
+    var canEditRoles = await Model.HasAccessAsync(
+        "/Administration/Accounts/Permissions/EditRoles");
+}
+```
+
+Or:
 
 ```csharp
-var canEditRoles = await Model.HasAccessAsync(
-    "/Administration/Accounts/AccountPermissions/EditRoles");
+var canManageAnything = await HttpContext.HasAnyAccessAsync(
+    "/Administration/Accounts/Permissions/EditRoles",
+    "/Administration/Accounts/Permissions/ViewHistory");
 ```
 
-Unknown in-page permission keys fail closed, and the access snapshot is loaded at most once per HTTP request.
+Unknown in-page permission keys fail closed, even when a broad wildcard would otherwise match.
+
+## Anonymous pages
+
+Standard ASP.NET Core `[AllowAnonymous]` is respected. You can also configure exact or prefix rules:
+
+```csharp
+options.AllowAnonymous("/Account/Login", "/Public/*");
+```
+
+Bare `AllowAnonymous("*")` is rejected. For an intentional opt-in model:
+
+```csharp
+options.ProtectRazorPagesByDefault(false);
+```
+
+Then add `[AutoPolicy]` to specific PageModels that should be protected.
 
 ## Permission-denied behavior
 
-`PermissionDeniedBehavior.Default` delegates to the application's normal ASP.NET Core behavior. `PermissionDeniedBehavior.StatusCode403` returns HTTP 403 for AutoPolicy forbids while preserving normal authentication challenges.
+```csharp
+options.PermissionDeniedBehavior = PermissionDeniedBehavior.Default;
+```
 
-## Package status
+uses the application's normal ASP.NET Core behavior.
 
-The public API is still being refined for the first `0.1.0` release. Review the repository changelog when adopting a development build.
+```csharp
+options.PermissionDeniedBehavior = PermissionDeniedBehavior.StatusCode403;
+```
+
+returns a direct HTTP 403 for AutoPolicy forbids while preserving normal authentication challenges and unrelated authorization policies.
+
+## Built-in claims adapter
+
+Without a custom provider, authenticated claims are mapped using these defaults:
+
+| Access | Claim type |
+| --- | --- |
+| Allow roles | `ClaimTypes.Role` |
+| Allow groups | `permission_group` |
+| Allow permissions | `permission_allow` |
+| Deny roles | `permission_deny_role` |
+| Deny groups | `permission_deny_group` |
+| Deny permissions | `permission_deny` |
+
+## Validation and diagnostics
+
+`IPermissionRegistry` exposes discovered and explicitly registered permissions for diagnostics. Startup validation rejects duplicate canonical keys, cyclic/missing groups, invalid aliases, conflicting page overrides, and other structural errors. Set `StrictValidation = true` to turn stale permission references and wildcard patterns that match nothing into startup errors.
+
+AutoPolicy fails closed when permission state is missing or invalid, and deny rules always win.
 
 ## License
 

@@ -1,6 +1,6 @@
 namespace AutoPolicy;
 
-public static class PermissionModelValidator
+internal static class PermissionModelValidator
 {
     public static PermissionValidationResult Validate(
         PermissionModel model,

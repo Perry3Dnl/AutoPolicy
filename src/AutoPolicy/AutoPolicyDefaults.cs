@@ -1,6 +1,6 @@
 namespace AutoPolicy;
 
-public static class AutoPolicyDefaults
+internal static class AutoPolicyDefaults
 {
     public const string PolicyName = "AutoPolicy";
 }

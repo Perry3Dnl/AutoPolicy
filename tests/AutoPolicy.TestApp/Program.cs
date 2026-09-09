@@ -36,7 +36,7 @@ builder.Services.AddAutoPolicy(options =>
         role.IncludeGroup("StaffBase"));
 
     options.DefineRole("Administrator", role =>
-        role.Include(PermissionPattern.MatchAll));
+        role.Include("*"));
 });
 
 var app = builder.Build();

@@ -7,8 +7,22 @@ using Microsoft.Extensions.Options;
 
 namespace AutoPolicy;
 
+/// <summary>
+/// Registers AutoPolicy with an ASP.NET Core application's dependency-injection container.
+/// </summary>
 public static class AutoPolicyServiceCollectionExtensions
 {
+    /// <summary>
+    /// Adds automatic Razor Page permission discovery, authorization handling, startup validation,
+    /// in-page permission services, and the built-in claims access provider fallback.
+    /// </summary>
+    /// <remarks>
+    /// Register a custom <see cref="IAutoPolicyAccessProvider"/> before calling this method when the
+    /// application loads access from its own database, session, cache, or other storage.
+    /// </remarks>
+    /// <param name="services">The application service collection.</param>
+    /// <param name="configure">Optional AutoPolicy configuration.</param>
+    /// <returns>The same service collection for fluent registration.</returns>
     public static IServiceCollection AddAutoPolicy(
         this IServiceCollection services,
         Action<AutoPolicyOptions>? configure = null)

@@ -7,19 +7,18 @@ using Microsoft.Extensions.Options;
 namespace AutoPolicy;
 
 /// <summary>
-/// Convenience access checks for Razor Page models.
+/// Provides request-scoped permission checks for Razor Page models.
 /// </summary>
 public static class PageModelPermissionExtensions
 {
-    public static AutoPolicyServices GetAutoPolicy(this PageModel page)
-    {
-        ArgumentNullException.ThrowIfNull(page);
-        return page.HttpContext.GetAutoPolicy();
-    }
-
     /// <summary>
     /// Checks a discovered or explicitly registered AutoPolicy permission for the current request.
+    /// Unknown permission keys fail closed.
     /// </summary>
+    /// <param name="page">The current Razor Page model.</param>
+    /// <param name="permissionKey">The concrete permission key to check.</param>
+    /// <param name="cancellationToken">A token that can cancel access resolution.</param>
+    /// <returns><see langword="true"/> when the current access snapshot allows the permission.</returns>
     public static ValueTask<bool> HasAccessAsync(
         this PageModel page,
         string permissionKey,
@@ -31,7 +30,11 @@ public static class PageModelPermissionExtensions
 
     /// <summary>
     /// Checks whether the current request has at least one of the supplied permissions.
+    /// Unknown permission keys are treated as denied.
     /// </summary>
+    /// <param name="page">The current Razor Page model.</param>
+    /// <param name="permissionKeys">Concrete permission keys to check.</param>
+    /// <returns><see langword="true"/> when at least one registered permission is allowed.</returns>
     public static ValueTask<bool> HasAnyAccessAsync(
         this PageModel page,
         params string[] permissionKeys)
@@ -43,6 +46,9 @@ public static class PageModelPermissionExtensions
     /// <summary>
     /// Gets all currently effective permissions known to the AutoPolicy registry.
     /// </summary>
+    /// <param name="page">The current Razor Page model.</param>
+    /// <param name="cancellationToken">A token that can cancel access resolution.</param>
+    /// <returns>The registered permissions that remain allowed after deny-wins evaluation.</returns>
     public static ValueTask<IReadOnlyCollection<string>> GetEffectivePermissionsAsync(
         this PageModel page,
         CancellationToken cancellationToken = default)
@@ -53,59 +59,62 @@ public static class PageModelPermissionExtensions
 }
 
 /// <summary>
-/// Convenience access checks for the current HTTP request.
+/// Provides request-scoped permission checks for <see cref="HttpContext"/>.
 /// </summary>
 public static class HttpContextPermissionExtensions
 {
-    public static AutoPolicyServices GetAutoPolicy(this HttpContext httpContext)
-    {
-        ArgumentNullException.ThrowIfNull(httpContext);
-        return new AutoPolicyServices(httpContext);
-    }
-
     /// <summary>
     /// Checks a discovered or explicitly registered AutoPolicy permission for the current request.
+    /// Unknown permission keys fail closed.
     /// </summary>
+    /// <param name="httpContext">The current HTTP context.</param>
+    /// <param name="permissionKey">The concrete permission key to check.</param>
+    /// <param name="cancellationToken">A token that can cancel access resolution.</param>
+    /// <returns><see langword="true"/> when the current access snapshot allows the permission.</returns>
     public static ValueTask<bool> HasAccessAsync(
         this HttpContext httpContext,
         string permissionKey,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
-        return httpContext.GetAutoPolicy().HasAccessAsync(permissionKey, cancellationToken);
+        return new AutoPolicyServices(httpContext).HasAccessAsync(permissionKey, cancellationToken);
     }
 
     /// <summary>
     /// Checks whether the current request has at least one of the supplied permissions.
+    /// Unknown permission keys are treated as denied.
     /// </summary>
+    /// <param name="httpContext">The current HTTP context.</param>
+    /// <param name="permissionKeys">Concrete permission keys to check.</param>
+    /// <returns><see langword="true"/> when at least one registered permission is allowed.</returns>
     public static ValueTask<bool> HasAnyAccessAsync(
         this HttpContext httpContext,
         params string[] permissionKeys)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
-        return httpContext.GetAutoPolicy().HasAnyAccessAsync(permissionKeys);
+        return new AutoPolicyServices(httpContext).HasAnyAccessAsync(permissionKeys);
     }
 
     /// <summary>
     /// Gets all currently effective permissions known to the AutoPolicy registry.
     /// </summary>
+    /// <param name="httpContext">The current HTTP context.</param>
+    /// <param name="cancellationToken">A token that can cancel access resolution.</param>
+    /// <returns>The registered permissions that remain allowed after deny-wins evaluation.</returns>
     public static ValueTask<IReadOnlyCollection<string>> GetEffectivePermissionsAsync(
         this HttpContext httpContext,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
-        return httpContext.GetAutoPolicy().GetEffectivePermissionsAsync(cancellationToken);
+        return new AutoPolicyServices(httpContext).GetEffectivePermissionsAsync(cancellationToken);
     }
 }
 
-/// <summary>
-/// Provides request-scoped access to AutoPolicy services and access checks.
-/// </summary>
-public sealed class AutoPolicyServices
+internal sealed class AutoPolicyServices
 {
     private readonly HttpContext _httpContext;
 
-    internal AutoPolicyServices(HttpContext httpContext)
+    public AutoPolicyServices(HttpContext httpContext)
     {
         _httpContext = httpContext;
     }
@@ -118,25 +127,19 @@ public sealed class AutoPolicyServices
     private ILogger<AutoPolicyServices>? Logger =>
         Services.GetService<ILogger<AutoPolicyServices>>();
 
-    public IPermissionRegistry Registry =>
+    private IPermissionRegistry Registry =>
         Services.GetRequiredService<IPermissionRegistry>();
 
-    public IPermissionEvaluator Evaluator =>
+    private IPermissionEvaluator Evaluator =>
         Services.GetRequiredService<IPermissionEvaluator>();
 
-    public IAutoPolicyAccessProvider Provider =>
+    private IAutoPolicyAccessProvider Provider =>
         Services.GetRequiredService<IAutoPolicyAccessProvider>();
 
-    /// <summary>
-    /// Gets the host application's access snapshot, cached for the lifetime of this HTTP request.
-    /// </summary>
     public ValueTask<AutoPolicyAccess> GetAccessAsync(
         CancellationToken cancellationToken = default) =>
         AutoPolicyAccessCache.GetAsync(_httpContext, Provider, cancellationToken);
 
-    /// <summary>
-    /// Checks a discovered or explicitly registered permission. Unknown keys fail closed.
-    /// </summary>
     public async ValueTask<bool> HasAccessAsync(
         string permissionKey,
         CancellationToken cancellationToken = default)
@@ -165,10 +168,6 @@ public sealed class AutoPolicyServices
         }
     }
 
-    /// <summary>
-    /// Checks whether at least one discovered or explicitly registered permission is allowed.
-    /// Unknown keys are treated as denied.
-    /// </summary>
     public async ValueTask<bool> HasAnyAccessAsync(
         IEnumerable<string> permissionKeys,
         CancellationToken cancellationToken = default)
@@ -213,9 +212,6 @@ public sealed class AutoPolicyServices
         }
     }
 
-    /// <summary>
-    /// Gets all effective permissions from the current registry. Failures return an empty set.
-    /// </summary>
     public async ValueTask<IReadOnlyCollection<string>> GetEffectivePermissionsAsync(
         CancellationToken cancellationToken = default)
     {

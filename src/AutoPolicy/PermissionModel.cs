@@ -1,13 +1,6 @@
 namespace AutoPolicy;
 
-/// <summary>
-/// Application-defined permission groups and roles used to expand <see cref="AutoPolicyAccess"/> snapshots.
-/// </summary>
-/// <remarks>
-/// The model defines what roles and groups mean. The host application remains responsible for
-/// assigning those role and group names to users or requests through <see cref="IAutoPolicyAccessProvider"/>.
-/// </remarks>
-public sealed class PermissionModel
+internal sealed class PermissionModel
 {
     private readonly Dictionary<string, PermissionGroupDefinition> _groups =
         new(StringComparer.OrdinalIgnoreCase);

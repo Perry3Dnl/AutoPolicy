@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace AutoPolicy;
 
-public sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequirement>
+internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequirement>
 {
     private readonly IAutoPolicyAccessProvider _provider;
     private readonly IPermissionEvaluator _evaluator;

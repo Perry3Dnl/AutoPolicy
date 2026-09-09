@@ -1,6 +1,6 @@
 namespace AutoPolicy;
 
-public sealed class PermissionEvaluator : IPermissionEvaluator
+internal sealed class PermissionEvaluator : IPermissionEvaluator
 {
     private readonly PermissionModel _model;
 

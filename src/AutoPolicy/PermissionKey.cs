@@ -1,11 +1,6 @@
 namespace AutoPolicy;
 
-/// <summary>
-/// Canonical permission identity derived from a page or endpoint definition.
-/// Keys use a leading slash, no trailing slash, and ordinal ignore-case comparison.
-/// Query strings and fragments are not part of the identity.
-/// </summary>
-public readonly struct PermissionKey : IEquatable<PermissionKey>
+internal readonly struct PermissionKey : IEquatable<PermissionKey>
 {
     public PermissionKey(string value)
     {
@@ -44,7 +39,7 @@ public readonly struct PermissionKey : IEquatable<PermissionKey>
         if (s.Contains('*'))
         {
             throw new ArgumentException(
-                "Permission key cannot contain wildcard characters. Use PermissionPattern for wildcard rules.",
+                "Permission key cannot contain wildcard characters. Use a permission pattern for wildcard rules.",
                 nameof(value));
         }
 

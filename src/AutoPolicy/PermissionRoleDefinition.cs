@@ -1,6 +1,6 @@
 namespace AutoPolicy;
 
-public sealed class PermissionRoleDefinition
+internal sealed class PermissionRoleDefinition
 {
     public PermissionRoleDefinition(
         string name,

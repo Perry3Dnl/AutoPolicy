@@ -23,14 +23,12 @@ services.AddAutoPolicy(options =>
 using var provider = services.BuildServiceProvider();
 using var scope = provider.CreateScope();
 
+var registry = scope.ServiceProvider.GetRequiredService<IPermissionRegistry>();
 Require(
-    scope.ServiceProvider.GetService<IPermissionRegistry>() is not null,
-    "The packaged consumer could not resolve IPermissionRegistry.");
-Require(
-    scope.ServiceProvider.GetService<IPermissionEvaluator>() is not null,
-    "The packaged consumer could not resolve IPermissionEvaluator.");
+    registry.Contains(manageCapability),
+    "The packaged consumer could not resolve an explicitly registered permission through IPermissionRegistry.");
 
-var accessProvider = scope.ServiceProvider.GetService<IAutoPolicyAccessProvider>();
+var accessProvider = scope.ServiceProvider.GetRequiredService<IAutoPolicyAccessProvider>();
 Require(
     accessProvider is ClaimsAutoPolicyAccessProvider,
     "The packaged consumer could not resolve the built-in claims access provider.");
@@ -53,6 +51,9 @@ Require(
     await context.HasAccessAsync(manageCapability),
     "The packaged consumer could not authorize an explicitly registered in-page capability.");
 Require(
+    await context.HasAnyAccessAsync("/Ui/UnknownCapability", manageCapability),
+    "HasAnyAccessAsync did not authorize a known allowed capability.");
+Require(
     !await context.HasAccessAsync("/Ui/UnknownCapability"),
     "Unknown in-page capabilities must fail closed.");
 
@@ -60,9 +61,5 @@ var effectivePermissions = await context.GetEffectivePermissionsAsync();
 Require(
     effectivePermissions.Contains(manageCapability, StringComparer.OrdinalIgnoreCase),
     "The explicit capability was not included in effective permission enumeration.");
-
-Require(
-    AutoPolicyDefaults.PolicyName == "AutoPolicy",
-    "The packaged consumer observed an unexpected default policy name.");
 
 Console.WriteLine("Packaged AutoPolicy consumer smoke test passed.");
