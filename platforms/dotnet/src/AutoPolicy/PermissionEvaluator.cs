@@ -9,7 +9,7 @@ public sealed class PermissionEvaluator : IPermissionEvaluator
         _model = model ?? throw new ArgumentNullException(nameof(model));
     }
 
-    public bool HasAccess(string requiredPermission, UserAccess access)
+    public bool HasAccess(string requiredPermission, AutoPolicyAccess access)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requiredPermission);
         ArgumentNullException.ThrowIfNull(access);
@@ -25,13 +25,13 @@ public sealed class PermissionEvaluator : IPermissionEvaluator
         return allowed.Any(pattern => PermissionPattern.Matches(key, pattern));
     }
 
-    public IReadOnlyCollection<string> Expand(UserAccess access, bool denied)
+    public IReadOnlyCollection<string> Expand(AutoPolicyAccess access, bool denied)
     {
         ArgumentNullException.ThrowIfNull(access);
         return ExpandPatterns(access, denied);
     }
 
-    public IReadOnlyCollection<string> GetEffectivePermissions(UserAccess access, IPermissionRegistry registry)
+    public IReadOnlyCollection<string> GetEffectivePermissions(AutoPolicyAccess access, IPermissionRegistry registry)
     {
         ArgumentNullException.ThrowIfNull(access);
         ArgumentNullException.ThrowIfNull(registry);
@@ -56,7 +56,7 @@ public sealed class PermissionEvaluator : IPermissionEvaluator
         return allowed;
     }
 
-    private IReadOnlyCollection<string> ExpandPatterns(UserAccess access, bool denied)
+    private IReadOnlyCollection<string> ExpandPatterns(AutoPolicyAccess access, bool denied)
     {
         var roles = denied ? access.DenyRoles : access.AllowRoles;
         var groups = denied ? access.DenyGroups : access.AllowGroups;

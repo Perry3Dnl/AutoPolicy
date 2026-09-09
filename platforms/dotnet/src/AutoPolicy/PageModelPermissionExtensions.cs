@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,33 +18,34 @@ public static class HttpContextPermissionExtensions
     public static AutoPolicyServices GetAutoPolicy(this HttpContext httpContext)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
-        return new AutoPolicyServices(httpContext.RequestServices);
+        return new AutoPolicyServices(httpContext);
     }
 }
 
 public sealed class AutoPolicyServices
 {
-    private readonly IServiceProvider _services;
+    private readonly HttpContext _httpContext;
 
-    internal AutoPolicyServices(IServiceProvider services)
+    internal AutoPolicyServices(HttpContext httpContext)
     {
-        _services = services;
+        _httpContext = httpContext;
     }
 
+    private IServiceProvider Services => _httpContext.RequestServices;
+
     public IPermissionRegistry Registry =>
-        _services.GetRequiredService<IPermissionRegistry>();
+        Services.GetRequiredService<IPermissionRegistry>();
 
     public IPermissionEvaluator Evaluator =>
-        _services.GetRequiredService<IPermissionEvaluator>();
+        Services.GetRequiredService<IPermissionEvaluator>();
 
-    public IUserPermissionProvider Provider =>
-        _services.GetRequiredService<IUserPermissionProvider>();
+    public IAutoPolicyAccessProvider Provider =>
+        Services.GetRequiredService<IAutoPolicyAccessProvider>();
 
-    public ValueTask<UserAccess> GetAccessAsync(
-        ClaimsPrincipal user,
+    public ValueTask<AutoPolicyAccess> GetAccessAsync(
         CancellationToken cancellationToken = default) =>
-        Provider.GetAccessAsync(user, cancellationToken);
+        Provider.GetAccessAsync(_httpContext, cancellationToken);
 
-    public IReadOnlyCollection<string> GetEffectivePermissions(UserAccess access) =>
+    public IReadOnlyCollection<string> GetEffectivePermissions(AutoPolicyAccess access) =>
         Evaluator.GetEffectivePermissions(access, Registry);
 }

@@ -8,13 +8,13 @@ namespace AutoPolicy;
 
 public sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequirement>
 {
-    private readonly IUserPermissionProvider _provider;
+    private readonly IAutoPolicyAccessProvider _provider;
     private readonly IPermissionEvaluator _evaluator;
     private readonly IOptions<AutoPolicyOptions> _options;
     private readonly ILogger<AutoPolicyHandler> _logger;
 
     public AutoPolicyHandler(
-        IUserPermissionProvider provider,
+        IAutoPolicyAccessProvider provider,
         IPermissionEvaluator evaluator,
         IOptions<AutoPolicyOptions> options,
         ILogger<AutoPolicyHandler> logger)
@@ -30,6 +30,13 @@ public sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequireme
         AutoPolicyRequirement requirement)
     {
         var httpContext = ResolveHttpContext(context);
+        if (httpContext is null)
+        {
+            _logger.LogWarning("AutoPolicy could not resolve the current HttpContext. Denying the request.");
+            context.Fail();
+            return;
+        }
+
         if (!TryResolvePermissionKey(httpContext, requirement, out var key))
         {
             _logger.LogWarning("Path permission mapping could not be resolved. Denying the request.");
@@ -37,20 +44,23 @@ public sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequireme
             return;
         }
 
-        if (context.User?.Identity?.IsAuthenticated != true)
-        {
-            return;
-        }
-
-        UserAccess access;
+        AutoPolicyAccess access;
         try
         {
-            var cancellation = httpContext?.RequestAborted ?? CancellationToken.None;
-            access = await _provider.GetAccessAsync(context.User, cancellation).ConfigureAwait(false);
+            access = await _provider
+                .GetAccessAsync(httpContext, httpContext.RequestAborted)
+                .ConfigureAwait(false);
+
+            if (access is null)
+            {
+                _logger.LogError("IAutoPolicyAccessProvider returned null. Denying the request.");
+                context.Fail();
+                return;
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "IUserPermissionProvider failed while loading access. Denying the request.");
+            _logger.LogError(ex, "IAutoPolicyAccessProvider failed while loading access. Denying the request.");
             context.Fail();
             return;
         }
@@ -74,7 +84,7 @@ public sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequireme
     }
 
     private bool TryResolvePermissionKey(
-        HttpContext? httpContext,
+        HttpContext httpContext,
         AutoPolicyRequirement requirement,
         out string key)
     {
@@ -84,7 +94,7 @@ public sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequireme
             return true;
         }
 
-        var metadata = httpContext?.GetEndpoint()?.Metadata.GetMetadata<AutoPolicyMetadata>();
+        var metadata = httpContext.GetEndpoint()?.Metadata.GetMetadata<AutoPolicyMetadata>();
         if (metadata is not null)
         {
             key = Canonicalize(metadata.Key);

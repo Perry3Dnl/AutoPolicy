@@ -2,9 +2,9 @@ namespace AutoPolicy;
 
 public interface IPermissionEvaluator
 {
-    bool HasAccess(string requiredPermission, UserAccess access);
+    bool HasAccess(string requiredPermission, AutoPolicyAccess access);
 
-    IReadOnlyCollection<string> Expand(UserAccess access, bool denied);
+    IReadOnlyCollection<string> Expand(AutoPolicyAccess access, bool denied);
 
-    IReadOnlyCollection<string> GetEffectivePermissions(UserAccess access, IPermissionRegistry registry);
+    IReadOnlyCollection<string> GetEffectivePermissions(AutoPolicyAccess access, IPermissionRegistry registry);
 }

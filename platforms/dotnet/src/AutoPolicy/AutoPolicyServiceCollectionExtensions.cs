@@ -26,8 +26,7 @@ public static class AutoPolicyServiceCollectionExtensions
         services.AddSingleton<IPermissionEvaluator>(sp =>
             new PermissionEvaluator(sp.GetRequiredService<PermissionModel>()));
 
-        services.TryAddScoped<IUserPermissionProvider, EmptyUserPermissionProvider>();
-        services.TryAddSingleton<ClaimsUserPermissionProvider>();
+        services.TryAddScoped<IAutoPolicyAccessProvider, ClaimsAutoPolicyAccessProvider>();
 
         services.AddTransient<IAuthorizationHandler, AutoPolicyHandler>();
         services.AddAuthorization(options =>
