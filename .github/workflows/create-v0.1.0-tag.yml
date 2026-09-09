@@ -1,4 +1,4 @@
-name: Create v0.1.0 Tag
+name: Publish AutoPolicy 0.1.0
 
 on:
   push:
@@ -9,36 +9,86 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
-  tag:
-    name: Create release tag
+  release:
+    name: Validate and publish v0.1.0
     runs-on: ubuntu-latest
+    environment: release
+
     steps:
-      - name: Checkout
+      - name: Checkout release tag
         uses: actions/checkout@v4
         with:
+          ref: v0.1.0
           fetch-depth: 0
 
-      - name: Verify and create v0.1.0 tag
+      - name: Verify release tag target
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin main --tags --quiet
-
-          MAIN_SHA="$(git rev-parse origin/main)"
-          HEAD_SHA="$(git rev-parse HEAD)"
-          if [ "$HEAD_SHA" != "$MAIN_SHA" ]; then
-            echo "Refusing to tag: checkout is not current main."
+          TAG_SHA="$(git rev-list -n 1 v0.1.0)"
+          EXPECTED_SHA="1d9efff9f5e6830fd20ad104136a95baad701e8a"
+          if [ "$TAG_SHA" != "$EXPECTED_SHA" ]; then
+            echo "v0.1.0 points to $TAG_SHA, expected $EXPECTED_SHA."
             exit 1
           fi
 
-          if git rev-parse -q --verify "refs/tags/v0.1.0" >/dev/null; then
-            echo "v0.1.0 already exists; nothing to do."
-            exit 0
-          fi
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a v0.1.0 -m "AutoPolicy 0.1.0"
-          git push origin v0.1.0
+      - name: Test
+        run: dotnet test AutoPolicy.slnx --configuration Release
+
+      - name: Pack
+        run: dotnet pack src/AutoPolicy/AutoPolicy.csproj --configuration Release --output artifacts
+
+      - name: Validate package contents and metadata
+        shell: pwsh
+        run: ./scripts/Validate-Packages.ps1 -ArtifactsPath ./artifacts
+
+      - name: Restore packaged consumer smoke test
+        run: >-
+          dotnet restore smoke/AutoPolicy.ConsumerSmoke/AutoPolicy.ConsumerSmoke.csproj
+          --configfile smoke/AutoPolicy.ConsumerSmoke/NuGet.config
+          --packages artifacts/.smoke-packages
+          --no-cache
+
+      - name: Run packaged consumer smoke test
+        run: dotnet run --project smoke/AutoPolicy.ConsumerSmoke/AutoPolicy.ConsumerSmoke.csproj --configuration Release --no-restore
+
+      - name: NuGet login via Trusted Publishing
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Publish AutoPolicy 0.1.0
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          set -euo pipefail
+          dotnet nuget push "artifacts/AutoPolicy.0.1.0.nupkg" \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v0.1.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "GitHub release v0.1.0 already exists."
+          else
+            gh release create v0.1.0 \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "AutoPolicy 0.1.0" \
+              --generate-notes \
+              --verify-tag
+          fi
