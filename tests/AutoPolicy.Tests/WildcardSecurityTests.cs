@@ -151,7 +151,7 @@ public sealed class WildcardSecurityTests
         Assert.DoesNotContain("/Admin/Dashboard", effective);
         Assert.DoesNotContain("/Admin/Secret", effective);
         Assert.Contains("/Reports/Daily", effective);
-        Assert.Equal(1, effective.Count);
+        Assert.Single(effective);
     }
 
     [Fact]
