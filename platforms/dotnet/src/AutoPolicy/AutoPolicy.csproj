@@ -5,17 +5,21 @@
     <RootNamespace>AutoPolicy</RootNamespace>
     <AssemblyName>AutoPolicy</AssemblyName>
     <PackageId>AutoPolicy</PackageId>
-    <Version>0.1.0</Version>
+    <Version>$(AutoPolicyVersion)</Version>
     <Description>Automatically turns ASP.NET Core Razor Pages into permission identities, then applies roles, groups, grants, and deny-wins overrides through the standard authorization pipeline.</Description>
     <PackageTags>aspnetcore;authorization;razorpages;permissions;policy</PackageTags>
     <IsPackable>true</IsPackable>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <PackageReadmeFile>README.NUGET.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../../../README.NUGET.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 
 </Project>

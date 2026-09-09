@@ -4,7 +4,9 @@ obj/
 *.user
 *.suo
 *.nupkg
+*.snupkg
 TestResults/
+artifacts/
 
 # IDEs
 .vs/
