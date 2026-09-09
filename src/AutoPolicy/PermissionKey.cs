@@ -41,7 +41,7 @@ public readonly struct PermissionKey : IEquatable<PermissionKey>
             throw new ArgumentException("Permission key cannot be empty.", nameof(value));
         }
 
-        if (s.Contains('*', StringComparison.Ordinal))
+        if (s.Contains('*'))
         {
             throw new ArgumentException(
                 "Permission key cannot contain wildcard characters. Use PermissionPattern for wildcard rules.",
