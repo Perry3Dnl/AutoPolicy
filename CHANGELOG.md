@@ -10,5 +10,6 @@ All notable changes to AutoPolicy will be documented in this file.
 - Replaced the user-bound access model with request-scoped `AutoPolicyAccess` and `IAutoPolicyAccessProvider` abstractions.
 - Added a built-in claims adapter while keeping custom non-claims access providers supported.
 - Removed the authentication check from the core authorization handler so custom providers can authorize independently of `ClaimsPrincipal` authentication state.
+- Flattened the repository to a conventional .NET layout with root `src`, `tests`, `smoke`, and `scripts` folders plus `AutoPolicy.slnx`.
 
 `0.1.0` has not been released yet.

@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="../../../../README.NUGET.md" Pack="true" PackagePath="/" />
+    <None Include="../../README.NUGET.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 
 </Project>

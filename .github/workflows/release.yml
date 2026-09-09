@@ -7,12 +7,16 @@ on:
   pull_request:
     paths:
       - ".github/workflows/release.yml"
+      - "AutoPolicy.slnx"
       - "Directory.Build.props"
       - "LICENSE"
       - "README.md"
       - "README.NUGET.md"
       - "CHANGELOG.md"
-      - "platforms/dotnet/**"
+      - "src/**"
+      - "tests/**"
+      - "smoke/**"
+      - "scripts/**"
   workflow_dispatch:
 
 permissions:
@@ -68,24 +72,24 @@ jobs:
           }
 
       - name: Test
-        run: dotnet test platforms/dotnet/tests/AutoPolicy.Tests/AutoPolicy.Tests.csproj --configuration Release
+        run: dotnet test AutoPolicy.slnx --configuration Release
 
       - name: Pack
-        run: dotnet pack platforms/dotnet/src/AutoPolicy/AutoPolicy.csproj --configuration Release --output artifacts
+        run: dotnet pack src/AutoPolicy/AutoPolicy.csproj --configuration Release --output artifacts
 
       - name: Validate package contents and metadata
         shell: pwsh
-        run: ./platforms/dotnet/scripts/Validate-Packages.ps1 -ArtifactsPath ./artifacts
+        run: ./scripts/Validate-Packages.ps1 -ArtifactsPath ./artifacts
 
       - name: Restore packaged consumer smoke test
         run: >-
-          dotnet restore platforms/dotnet/smoke/AutoPolicy.ConsumerSmoke/AutoPolicy.ConsumerSmoke.csproj
-          --configfile platforms/dotnet/smoke/AutoPolicy.ConsumerSmoke/NuGet.config
+          dotnet restore smoke/AutoPolicy.ConsumerSmoke/AutoPolicy.ConsumerSmoke.csproj
+          --configfile smoke/AutoPolicy.ConsumerSmoke/NuGet.config
           --packages artifacts/.smoke-packages
           --no-cache
 
       - name: Run packaged consumer smoke test
-        run: dotnet run --project platforms/dotnet/smoke/AutoPolicy.ConsumerSmoke/AutoPolicy.ConsumerSmoke.csproj --configuration Release --no-restore
+        run: dotnet run --project smoke/AutoPolicy.ConsumerSmoke/AutoPolicy.ConsumerSmoke.csproj --configuration Release --no-restore
 
       - name: Upload release package
         uses: actions/upload-artifact@v4

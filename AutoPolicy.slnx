@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/AutoPolicy/AutoPolicy.csproj" />
+  <Project Path="tests/AutoPolicy.Tests/AutoPolicy.Tests.csproj" />
+</Solution>

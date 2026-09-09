@@ -9,30 +9,33 @@ AutoPolicy maps Razor Pages to canonical permission identities and evaluates acc
 ## Repository layout
 
 ```text
-platforms/dotnet/src/AutoPolicy/        Package source
-platforms/dotnet/tests/AutoPolicy.Tests/ Automated tests
-platforms/dotnet/smoke/                 Packaged-consumer smoke test
-platforms/dotnet/scripts/               Package validation scripts
+src/AutoPolicy/                    Package source
+tests/AutoPolicy.Tests/            Automated tests
+smoke/AutoPolicy.ConsumerSmoke/    Packaged-consumer smoke test
+scripts/                           Package validation scripts
+AutoPolicy.slnx                    Main development solution
 ```
 
 ## Development
 
+Open `AutoPolicy.slnx` in Visual Studio or another .NET-compatible IDE.
+
 Run the test suite:
 
 ```bash
-dotnet test platforms/dotnet/tests/AutoPolicy.Tests/AutoPolicy.Tests.csproj --configuration Release
+dotnet test AutoPolicy.slnx --configuration Release
 ```
 
 Build a NuGet package locally:
 
 ```bash
-dotnet pack platforms/dotnet/src/AutoPolicy/AutoPolicy.csproj --configuration Release --output artifacts
+dotnet pack src/AutoPolicy/AutoPolicy.csproj --configuration Release --output artifacts
 ```
 
 Validate the generated package:
 
 ```powershell
-./platforms/dotnet/scripts/Validate-Packages.ps1 -ArtifactsPath ./artifacts
+./scripts/Validate-Packages.ps1 -ArtifactsPath ./artifacts
 ```
 
 The version under development is defined centrally in `Directory.Build.props`.

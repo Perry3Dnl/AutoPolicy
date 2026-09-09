@@ -1,5 +1,5 @@
 param(
-    [string]$ArtifactsPath = (Join-Path $PSScriptRoot "../../../artifacts")
+    [string]$ArtifactsPath = (Join-Path $PSScriptRoot "../artifacts")
 )
 
 $ErrorActionPreference = "Stop"
@@ -36,7 +36,7 @@ function Get-ZipEntryText {
     }
 }
 
-$repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "../../.."))
+$repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $propsPath = Join-Path $repoRoot "Directory.Build.props"
 Assert-True (Test-Path $propsPath) "Directory.Build.props was not found."
 
