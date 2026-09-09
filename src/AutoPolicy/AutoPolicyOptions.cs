@@ -2,6 +2,9 @@ namespace AutoPolicy;
 
 public sealed class AutoPolicyOptions
 {
+    private readonly HashSet<string> _explicitPermissions =
+        new(StringComparer.OrdinalIgnoreCase);
+
     public PermissionModel Model { get; } = new();
 
     public bool RazorPagesProtectedByDefault { get; set; } = true;
@@ -9,6 +12,12 @@ public sealed class AutoPolicyOptions
     public bool StrictValidation { get; set; }
 
     public IList<string> AnonymousPatterns { get; } = new List<string>();
+
+    /// <summary>
+    /// Gets explicitly registered non-route permissions, such as permissions used by partials,
+    /// page sections, buttons, menu items, or other application capabilities.
+    /// </summary>
+    public IReadOnlyCollection<string> ExplicitPermissions => _explicitPermissions;
 
     public IDictionary<string, string> PermissionKeyOverrides { get; } =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -29,6 +38,23 @@ public sealed class AutoPolicyOptions
         {
             PermissionPattern.Validate(pattern);
             AnonymousPatterns.Add(pattern.Trim());
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Registers one or more permissions that are not discovered from Razor Page routes.
+    /// Explicit permissions participate in roles, groups, wildcard matching, deny-wins evaluation,
+    /// registry diagnostics, and in-page access checks exactly like discovered page permissions.
+    /// </summary>
+    public AutoPolicyOptions DefinePermission(params string[] permissionKeys)
+    {
+        ArgumentNullException.ThrowIfNull(permissionKeys);
+
+        foreach (var permissionKey in permissionKeys)
+        {
+            _explicitPermissions.Add(PermissionKey.Normalize(permissionKey));
         }
 
         return this;
