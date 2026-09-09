@@ -136,7 +136,12 @@ public sealed class PermissionEvaluator : IPermissionEvaluator
     {
         if (!PermissionPattern.IsWildcard(pattern))
         {
-            yield return PermissionKey.Normalize(pattern);
+            var key = PermissionKey.Normalize(pattern);
+            if (registry.Contains(key))
+            {
+                yield return key;
+            }
+
             yield break;
         }
 
