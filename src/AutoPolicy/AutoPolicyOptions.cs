@@ -50,7 +50,17 @@ public sealed class AutoPolicyOptions
         foreach (var pattern in patterns)
         {
             PermissionPattern.Validate(pattern);
-            AnonymousPatterns.Add(pattern.Trim());
+            var trimmed = pattern.Trim();
+
+            if (trimmed == PermissionPattern.MatchAll)
+            {
+                throw new ArgumentException(
+                    "The match-all '*' pattern cannot be used with AllowAnonymous. "
+                    + "Use ProtectRazorPagesByDefault(false) for an intentional global opt-out.",
+                    nameof(patterns));
+            }
+
+            AnonymousPatterns.Add(trimmed);
         }
 
         return this;
@@ -71,15 +81,15 @@ public sealed class AutoPolicyOptions
 
         foreach (var permissionKey in permissionKeys)
         {
-            var normalized = PermissionKey.Normalize(permissionKey);
-            if (PermissionPattern.IsWildcard(normalized))
+            PermissionPattern.Validate(permissionKey);
+            if (PermissionPattern.IsWildcard(permissionKey))
             {
                 throw new ArgumentException(
-                    $"Explicit permission '{normalized}' must be a concrete permission key, not a wildcard pattern.",
+                    $"Explicit permission '{permissionKey.Trim()}' must be a concrete permission key, not a wildcard pattern.",
                     nameof(permissionKeys));
             }
 
-            _explicitPermissions.Add(normalized);
+            _explicitPermissions.Add(PermissionKey.Normalize(permissionKey));
         }
 
         return this;
