@@ -47,16 +47,9 @@ public sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequireme
         AutoPolicyAccess access;
         try
         {
-            access = await _provider
-                .GetAccessAsync(httpContext, httpContext.RequestAborted)
+            access = await AutoPolicyAccessCache
+                .GetAsync(httpContext, _provider, httpContext.RequestAborted)
                 .ConfigureAwait(false);
-
-            if (access is null)
-            {
-                _logger.LogError("IAutoPolicyAccessProvider returned null. Denying the request.");
-                context.Fail();
-                return;
-            }
         }
         catch (Exception ex)
         {
