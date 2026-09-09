@@ -19,6 +19,24 @@ builder.Services.AddAutoPolicy(options =>
     options.PermissionDeniedBehavior = PermissionDeniedBehavior.StatusCode403;
     options.AllowAnonymous("/Public/*");
     options.OverridePermissionKey("/Remapped", "/Virtual/Remapped");
+
+    options.DefineGroup("NestedPages", group =>
+        group.Include("/Nested/*"));
+
+    options.DefineGroup("ProbeAccess", group =>
+        group.Include("/Probe"));
+
+    options.DefineGroup("StaffBase", group =>
+    {
+        group.IncludeGroup("NestedPages");
+        group.IncludeGroup("ProbeAccess");
+    });
+
+    options.DefineRole("Staff", role =>
+        role.IncludeGroup("StaffBase"));
+
+    options.DefineRole("Administrator", role =>
+        role.Include(PermissionPattern.MatchAll));
 });
 
 var app = builder.Build();
@@ -65,7 +83,11 @@ internal sealed class HeaderAutoPolicyAccessProvider : IAutoPolicyAccessProvider
 
         return ValueTask.FromResult(new AutoPolicyAccess
         {
+            AllowRoles = Read(context, "X-AutoPolicy-Allow-Role"),
+            AllowGroups = Read(context, "X-AutoPolicy-Allow-Group"),
             AllowPermissions = Read(context, "X-AutoPolicy-Allow"),
+            DenyRoles = Read(context, "X-AutoPolicy-Deny-Role"),
+            DenyGroups = Read(context, "X-AutoPolicy-Deny-Group"),
             DenyPermissions = Read(context, "X-AutoPolicy-Deny")
         });
     }
