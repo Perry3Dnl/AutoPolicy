@@ -21,7 +21,20 @@ public static class AutoPolicyServiceCollectionExtensions
         }
 
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<AutoPolicyOptions>>().Value.Model);
-        services.AddSingleton<PermissionRegistry>();
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<AutoPolicyOptions>>().Value;
+            var registry = new PermissionRegistry();
+
+            foreach (var permissionKey in options.ExplicitPermissions)
+            {
+                registry.TryAdd(
+                    new PermissionRegistration(permissionKey),
+                    $"explicit permission '{permissionKey}'");
+            }
+
+            return registry;
+        });
         services.AddSingleton<IPermissionRegistry>(sp => sp.GetRequiredService<PermissionRegistry>());
         services.AddSingleton<IPermissionEvaluator>(sp =>
             new PermissionEvaluator(sp.GetRequiredService<PermissionModel>()));
