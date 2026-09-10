@@ -39,7 +39,7 @@ AutoPolicy discovers Razor Pages, assigns stable permission identities, and eval
 Install:
 
 ```bash
-dotnet add package AutoPolicy --version 0.1.0
+dotnet add package AutoPolicy --version 0.1.1
 ```
 
 ## 🚀 Quick start
