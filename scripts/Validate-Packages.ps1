@@ -66,6 +66,7 @@ try {
     $entryNames = @($archive.Entries | ForEach-Object { $_.FullName })
     $expectedEntries = @(
         "README.NUGET.md",
+        "autopolicy-icon.png",
         "lib/$framework/$assembly.dll",
         "lib/$framework/$assembly.xml"
     )
@@ -86,6 +87,7 @@ try {
     $licenseNode = $metadata.SelectSingleNode("*[local-name()='license']")
     $copyrightNode = $metadata.SelectSingleNode("*[local-name()='copyright']")
     $readmeNode = $metadata.SelectSingleNode("*[local-name()='readme']")
+    $iconNode = $metadata.SelectSingleNode("*[local-name()='icon']")
     $repositoryNode = $metadata.SelectSingleNode("*[local-name()='repository']")
 
     Assert-True ($idNode.InnerText -eq $id) "$id package metadata has the wrong package ID."
@@ -94,6 +96,8 @@ try {
     Assert-True ($licenseNode.GetAttribute("type") -eq "expression") "$id package license metadata is not an SPDX expression."
     Assert-True ($copyrightNode.InnerText -eq "Copyright (c) 2026 Perry3D.nl") "$id package copyright metadata is incorrect."
     Assert-True ($readmeNode.InnerText -eq "README.NUGET.md") "$id package README metadata is incorrect."
+    Assert-True ($null -ne $iconNode) "$id package icon metadata is missing."
+    Assert-True ($iconNode.InnerText -eq "autopolicy-icon.png") "$id package icon metadata is incorrect."
     Assert-True ($null -ne $repositoryNode) "$id package repository metadata is missing."
     Assert-True ($repositoryNode.GetAttribute("type") -eq "git") "$id package repository type is not git."
     Assert-True ($repositoryNode.GetAttribute("url") -eq "https://github.com/Perry3Dnl/AutoPolicy") "$id package repository URL is incorrect."
