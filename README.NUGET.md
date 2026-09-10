@@ -1,6 +1,10 @@
-# AutoPolicy
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Perry3Dnl/AutoPolicy/main/assets/autopolicy-icon.png" alt="AutoPolicy icon" width="96" />
+</p>
 
-Automatic, default-deny route permissions for ASP.NET Core Razor Pages.
+<h1 align="center">AutoPolicy</h1>
+
+<p align="center"><strong>Automatic, default-deny route permissions for ASP.NET Core Razor Pages.</strong></p>
 
 AutoPolicy discovers Razor Pages, maps them to stable permission identities, and evaluates access through ASP.NET Core authorization. Normal pages require no AutoPolicy attributes, policy strings, custom base classes, or injected permission services.
 
@@ -204,6 +208,12 @@ Without a custom provider, authenticated claims are mapped using these defaults:
 `IPermissionRegistry` exposes discovered and explicitly registered permissions for diagnostics. Startup validation rejects duplicate canonical keys, cyclic/missing groups, invalid aliases, conflicting page overrides, and other structural errors. Set `StrictValidation = true` to turn stale permission references and wildcard patterns that match nothing into startup errors.
 
 AutoPolicy fails closed when permission state is missing or invalid, and deny rules always win.
+
+## Links
+
+- [GitHub repository](https://github.com/Perry3Dnl/AutoPolicy)
+- [Authorization design](https://github.com/Perry3Dnl/AutoPolicy/blob/main/docs/AUTHORIZATION.md)
+- [Changelog](https://github.com/Perry3Dnl/AutoPolicy/blob/main/CHANGELOG.md)
 
 ## License
 
