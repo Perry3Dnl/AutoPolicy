@@ -12,6 +12,7 @@
     <PackageTags>aspnetcore;authorization;razorpages;permissions;policy</PackageTags>
     <IsPackable>true</IsPackable>
     <PackageReadmeFile>README.NUGET.md</PackageReadmeFile>
+    <PackageIcon>autopolicy-icon.png</PackageIcon>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
@@ -22,6 +23,7 @@
 
   <ItemGroup>
     <None Include="../../README.NUGET.md" Pack="true" PackagePath="/" />
+    <None Include="../../assets/autopolicy-icon.png" Pack="true" PackagePath="/" />
   </ItemGroup>
 
 </Project>
