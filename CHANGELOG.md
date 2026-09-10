@@ -4,6 +4,15 @@ All notable changes to AutoPolicy are documented in this file.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-10
+
+### Changed
+
+- Added the official AutoPolicy shield artwork to the repository and package documentation.
+- Added the AutoPolicy icon to NuGet package metadata so NuGet.org displays the correct package logo.
+- Added package validation for the embedded icon file and NuGet `icon` metadata.
+- Refreshed the GitHub and NuGet README branding to match AutoPolicy's current presentation.
+
 ## [0.1.0] - 2026-09-09
 
 ### Added
