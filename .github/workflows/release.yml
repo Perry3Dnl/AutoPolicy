@@ -2,12 +2,8 @@ name: NuGet Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*"
-    paths:
-      - "Directory.Build.props"
   pull_request:
     paths:
       - ".github/workflows/release.yml"
@@ -32,43 +28,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  create-version-tag:
-    name: Create version tag
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Create tag for package version
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          [xml]$props = Get-Content Directory.Build.props -Raw
-          $versionNode = $props.SelectSingleNode("/Project/PropertyGroup/AutoPolicyVersion")
-          if ($null -eq $versionNode -or [string]::IsNullOrWhiteSpace($versionNode.InnerText)) {
-              throw "AutoPolicyVersion is missing from Directory.Build.props."
-          }
-
-          $version = $versionNode.InnerText.Trim()
-          $tag = "v$version"
-
-          gh api "/repos/$env:GITHUB_REPOSITORY/git/ref/tags/$tag" --silent 2>$null
-          if ($LASTEXITCODE -eq 0) {
-              Write-Host "Tag $tag already exists."
-              exit 0
-          }
-
-          gh api --method POST "/repos/$env:GITHUB_REPOSITORY/git/refs" `
-              -f ref="refs/tags/$tag" `
-              -f sha="$env:GITHUB_SHA"
-
-          Write-Host "Created tag $tag at $env:GITHUB_SHA"
-
   build-and-validate:
     name: Build and validate package
     runs-on: ubuntu-latest
@@ -145,7 +104,7 @@ jobs:
 
   publish:
     name: Publish to NuGet.org
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build-and-validate
     runs-on: ubuntu-latest
     environment: release
@@ -164,25 +123,6 @@ jobs:
         with:
           name: autopolicy-release-package
           path: artifacts
-
-      - name: Ensure release tag points at this commit
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.build-and-validate.outputs.version }}
-        run: |
-          TAG="v${VERSION}"
-
-          if gh api "/repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
-            gh api --method PATCH "/repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" \
-              -f sha="$GITHUB_SHA" \
-              -F force=true >/dev/null
-          else
-            gh api --method POST "/repos/$GITHUB_REPOSITORY/git/refs" \
-              -f ref="refs/tags/$TAG" \
-              -f sha="$GITHUB_SHA" >/dev/null
-          fi
 
       - name: NuGet login via Trusted Publishing
         uses: NuGet/login@v1
