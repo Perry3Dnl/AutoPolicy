@@ -1,18 +1,49 @@
-# AutoPolicy
+<h1>
+  <img src="assets/autopolicy-icon.svg" alt="AutoPolicy icon" width="48" align="absmiddle" />
+  AutoPolicy
+</h1>
 
-Automatic, default-deny route permissions for ASP.NET Core Razor Pages.
+[![build](https://github.com/Perry3Dnl/AutoPolicy/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Perry3Dnl/AutoPolicy/actions/workflows/dotnet.yml)
+[![license](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](LICENSE)
+[![target](https://img.shields.io/badge/.NET-net10.0-512BD4.svg)](src/AutoPolicy/AutoPolicy.csproj)
+[![status](https://img.shields.io/badge/status-active%20development-6f42c1.svg)](CHANGELOG.md)
 
-AutoPolicy discovers Razor Pages, assigns stable permission identities, and evaluates access through ASP.NET Core authorization. Normal pages require no AutoPolicy attributes, policy strings, custom base classes, or injected permission services.
+**Automatic, default-deny Razor Pages permissions for ASP.NET Core.**
 
-## Install
+AutoPolicy discovers Razor Pages, gives them stable permission identities, and evaluates roles, groups, grants, and deny-wins overrides through the standard ASP.NET Core authorization pipeline. Normal pages need no AutoPolicy attributes, policy strings, custom base classes, or injected permission services.
+
+[**Authorization design**](docs/AUTHORIZATION.md) · [**Changelog**](CHANGELOG.md)
+
+## ✨ Features
+
+- ✅ Automatic permission identities for discovered **Razor Pages**
+- ✅ **Default-deny** protection for normal pages
+- ✅ Roles, groups, direct grants, and explicit denies
+- ✅ **Deny always wins**, regardless of the allow source
+- ✅ Exact permissions plus deliberately small, predictable wildcard rules
+- ✅ Custom application access through `IAutoPolicyAccessProvider`
+- ✅ Built-in claims adapter when no custom provider is registered
+- ✅ Explicit capabilities for partials, panels, buttons, and other non-route checks
+- ✅ Permission aliases and page-key overrides
+- ✅ Startup validation for malformed or conflicting policy configuration
+- ✅ Fail-closed behavior when access resolution fails
+- ✅ Uses the normal ASP.NET Core authentication and authorization pipeline
+
+## 📦 Package
+
+| Package | Target | Purpose |
+| --- | --- | --- |
+| `AutoPolicy` | `net10.0` | Razor Pages permission discovery, authorization, roles, groups, grants, denies, claims integration, and policy validation |
+
+AutoPolicy is intentionally a **single package**. There is no separate core package or ASP.NET Core integration package.
+
+The first NuGet release is still being prepared. For local package validation:
 
 ```bash
-dotnet add package AutoPolicy --version 0.1.0
+dotnet pack src/AutoPolicy/AutoPolicy.csproj --configuration Release --output artifacts
 ```
 
-AutoPolicy `0.1.0` targets .NET 10.
-
-## Quick start
+## 🚀 Quick start
 
 ```csharp
 builder.Services.AddRazorPages();
@@ -37,11 +68,13 @@ app.MapRazorPages();
 app.Run();
 ```
 
-Razor Pages are protected by default. With no access source, protected pages deny access.
+Razor Pages are protected by default. If a protected page has no effective grant, access is denied.
 
-## Automatic page permissions
+## Why AutoPolicy
 
-Permission identity comes from the Razor Page itself, not the browser URL at runtime.
+Traditional ASP.NET Core authorization often means repeating policy names, attributes, or permission checks across every page. That works, but it also creates another layer of identifiers that can drift away from the application structure.
+
+AutoPolicy uses the page itself as the canonical permission identity:
 
 ```text
 Pages/Staff/Members/Detail.cshtml
@@ -51,27 +84,79 @@ Areas/BackOffice/Pages/Dashboard.cshtml
 → /BackOffice/Dashboard
 ```
 
+That gives the application one predictable permission namespace while still leaving authentication, user storage, role assignment, and administration screens under your control.
+
+The model is deliberately defensive:
+
+- pages are protected by default;
+- permissions must exist before they can be granted;
+- malformed patterns are rejected;
+- unknown in-page permissions return `false`;
+- denies override every allow source;
+- provider failures deny access instead of silently granting it.
+
+## Automatic page permissions
+
+Permission identity comes from the Razor Page itself, not from the browser URL at runtime.
+
 Custom `@page` route templates, route values, query strings, and fragments do not change the permission identity. Permission keys are normalized and compared case-insensitively.
 
-For example, this page still requires `/Members/Detail`:
+For example:
 
 ```razor
 @page "/members/{id:int}"
 ```
 
-whether the request is `/members/12`, `/members/900`, or `/members/12?tab=history`.
+still resolves to the page's canonical permission key, so requests such as `/members/12`, `/members/900`, and `/members/12?tab=history` do not create separate permissions.
 
-## AutoPolicy does not manage users
+## Roles, groups, grants, and denies
 
-AutoPolicy defines and evaluates access. Your application owns:
+Roles and groups are application-defined names. AutoPolicy defines what those names mean; your application decides which ones apply to the current request.
 
-- authentication and user accounts
-- databases, sessions, claims, Redis, APIs, or other permission sources
-- assigning roles and groups
-- direct per-user grants and denies
-- administration screens that edit assignments
+```csharp
+builder.Services.AddAutoPolicy(options =>
+{
+    options.DefinePermission(
+        "/Administration/Accounts/Permissions/EditRoles",
+        "/Administration/Accounts/Permissions/EditGroups");
 
-`IAutoPolicyAccessProvider` is the integration boundary.
+    options.DefineGroup("AccountPermissionEditors", group =>
+    {
+        group.Include("/Administration/Accounts/Permissions/EditRoles");
+        group.Include("/Administration/Accounts/Permissions/EditGroups");
+    });
+
+    options.DefineRole("Admin", role =>
+    {
+        role.IncludeGroup("AccountPermissionEditors");
+        role.Include("/Reports/*");
+    });
+});
+```
+
+The access provider can then resolve the current request to something like:
+
+```csharp
+new AutoPolicyAccess
+{
+    AllowRoles = ["Admin"],
+    DenyPermissions = ["/Reports/Payroll"]
+};
+```
+
+The explicit deny wins even though the `Admin` role grants the broader `/Reports/*` pattern.
+
+## Application access provider
+
+AutoPolicy defines and evaluates access. Your application still owns:
+
+- authentication and user accounts;
+- databases, sessions, claims, Redis, APIs, or other permission sources;
+- assigning roles and groups;
+- direct per-user grants and denies;
+- administration screens that edit assignments.
+
+`IAutoPolicyAccessProvider` is the integration boundary:
 
 ```csharp
 public sealed class ApplicationAccessProvider : IAutoPolicyAccessProvider
@@ -99,7 +184,7 @@ public sealed class ApplicationAccessProvider : IAutoPolicyAccessProvider
 }
 ```
 
-Register a custom provider before `AddAutoPolicy`:
+Register the provider before `AddAutoPolicy`:
 
 ```csharp
 builder.Services.AddScoped<IAutoPolicyAccessProvider, ApplicationAccessProvider>();
@@ -109,44 +194,7 @@ builder.Services.AddAutoPolicy(options =>
 });
 ```
 
-The returned `AutoPolicyAccess` snapshot is cached once per HTTP request, so route authorization and repeated in-page checks use the same resolved state.
-
-## Roles, groups, and direct permissions
-
-Roles and groups are application-defined names. AutoPolicy defines what they mean; your application decides which names apply to the current request.
-
-```csharp
-builder.Services.AddAutoPolicy(options =>
-{
-    options.DefinePermission(
-        "/Administration/Accounts/Permissions/EditRoles",
-        "/Administration/Accounts/Permissions/EditGroups");
-
-    options.DefineGroup("AccountPermissionEditors", group =>
-    {
-        group.Include("/Administration/Accounts/Permissions/EditRoles");
-        group.Include("/Administration/Accounts/Permissions/EditGroups");
-    });
-
-    options.DefineRole("Admin", role =>
-    {
-        role.IncludeGroup("AccountPermissionEditors");
-        role.Include("/Reports/*");
-    });
-});
-```
-
-The provider can then return:
-
-```csharp
-new AutoPolicyAccess
-{
-    AllowRoles = ["Admin"],
-    DenyPermissions = ["/Reports/Payroll"]
-};
-```
-
-A deny always wins, regardless of how many roles, groups, or direct grants also allow the permission.
+The resolved `AutoPolicyAccess` snapshot is cached once per HTTP request, so route authorization and repeated in-page checks use the same access state.
 
 ## Wildcards
 
@@ -160,9 +208,9 @@ AutoPolicy intentionally supports a small wildcard grammar:
 
 `/Admin/*` matches `/Admin/Users` and `/Admin/Users/Edit`, but not `/Admin`, `/Administrator`, or `/Admin2/Users`.
 
-Embedded or ambiguous wildcards such as `/Admin/*/Edit`, `/Admin/**`, and `/Admin*` are rejected.
+Embedded or ambiguous patterns such as `/Admin/*/Edit`, `/Admin/**`, and `/Admin*` are rejected.
 
-`*` never invents permissions. A permission must first exist in the AutoPolicy registry through Razor Page discovery or `DefinePermission(...)`.
+`*` never invents permissions. A permission must already exist through Razor Page discovery or `DefinePermission(...)`.
 
 ## Partials, panels, buttons, and other capabilities
 
@@ -174,7 +222,7 @@ options.DefinePermission(
     "/Administration/Accounts/Permissions/ViewHistory");
 ```
 
-Then check them from Razor:
+Then use them for UI composition or feature gating:
 
 ```razor
 @using AutoPolicy
@@ -198,13 +246,11 @@ var canManageAnything = await HttpContext.HasAnyAccessAsync(
     "/Administration/Accounts/Permissions/EditGroups");
 ```
 
-Unknown in-page permission keys return `false`, even when the caller has a broad wildcard grant. This prevents a typo from becoming implicitly authorized.
-
-In-page checks are for UI composition and feature gating. They do not replace server-side authorization on an endpoint that performs a protected operation.
+Unknown in-page permission keys return `false`, even when the caller has a broad wildcard grant. In-page checks are for presentation and feature gating; they do not replace endpoint authorization for protected operations.
 
 ## Anonymous pages and opt-in protection
 
-Use standard ASP.NET Core metadata:
+Use normal ASP.NET Core metadata when appropriate:
 
 ```csharp
 [AllowAnonymous]
@@ -221,13 +267,15 @@ options.AllowAnonymous(
     "/Public/*");
 ```
 
-Bare `AllowAnonymous("*")` is rejected. If you intentionally want an opt-in model instead of the default-deny convention:
+Bare `AllowAnonymous("*")` is rejected.
+
+If an application intentionally wants opt-in protection instead of the default-deny convention:
 
 ```csharp
 options.ProtectRazorPagesByDefault(false);
 ```
 
-Then mark specific PageModels with `[AutoPolicy]` to protect them.
+Specific PageModels can then be protected with `[AutoPolicy]`.
 
 ## Permission overrides and aliases
 
@@ -251,13 +299,13 @@ Conflicting mappings, cycles, aliases that shadow registered permissions, and al
 
 ## Permission-denied responses
 
-The default keeps the application's existing ASP.NET Core behavior:
+Keep the host application's existing ASP.NET Core behavior:
 
 ```csharp
 options.PermissionDeniedBehavior = PermissionDeniedBehavior.Default;
 ```
 
-For a direct `403 Forbidden` on AutoPolicy forbids:
+Or return a direct `403 Forbidden` for AutoPolicy forbids:
 
 ```csharp
 options.PermissionDeniedBehavior = PermissionDeniedBehavior.StatusCode403;
@@ -267,7 +315,7 @@ Authentication challenges and unrelated authorization policies remain controlled
 
 ## Built-in claims adapter
 
-If you do not register a custom `IAutoPolicyAccessProvider`, AutoPolicy uses authenticated `ClaimsIdentity` instances.
+When no custom `IAutoPolicyAccessProvider` is registered, AutoPolicy uses authenticated `ClaimsIdentity` instances.
 
 | Access field | Default claim type |
 | --- | --- |
@@ -280,7 +328,7 @@ If you do not register a custom `IAutoPolicyAccessProvider`, AutoPolicy uses aut
 
 Anonymous identities contribute no access.
 
-For custom claim-type mappings, register `ClaimsAutoPolicyAccessProvider` yourself before `AddAutoPolicy`:
+Custom claim mappings can be registered before `AddAutoPolicy`:
 
 ```csharp
 builder.Services.AddScoped<IAutoPolicyAccessProvider>(_ =>
@@ -302,33 +350,39 @@ var registry = services.GetRequiredService<IPermissionRegistry>();
 var permissions = registry.GetAll();
 ```
 
-Startup validation rejects structural problems such as duplicate canonical keys, cyclic groups, missing included groups, invalid aliases, and invalid page overrides. Set `StrictValidation = true` to also treat stale exact permission references and wildcard patterns that match nothing as startup errors instead of warnings.
+Startup validation rejects structural problems such as duplicate canonical keys, cyclic groups, missing included groups, invalid aliases, and invalid page overrides.
+
+Enable strict validation to also turn stale exact references and wildcard patterns that match nothing into startup errors:
+
+```csharp
+options.StrictValidation = true;
+```
 
 ## Security behavior
 
 AutoPolicy is deliberately fail-closed:
 
-- protected pages with no grants are denied
-- provider exceptions and invalid provider results deny access
-- unknown permissions do not become grantable through wildcards
-- malformed permission patterns are rejected
-- configuration conflicts fail startup
-- deny rules override all allow sources
-- request cancellation is propagated rather than converted into an authorization result
+- protected pages with no grants are denied;
+- provider exceptions and invalid provider results deny access;
+- unknown permissions do not become grantable through wildcards;
+- malformed permission patterns are rejected;
+- configuration conflicts fail startup;
+- deny rules override all allow sources;
+- request cancellation is propagated rather than converted into an authorization result.
 
-## Repository
+## Public package and quality gates
 
-```text
-src/AutoPolicy/                    NuGet package source
-tests/AutoPolicy.Tests/            Unit and security tests
-tests/AutoPolicy.TestApp/          Razor Pages integration-test host
-smoke/AutoPolicy.ConsumerSmoke/    Packaged-consumer smoke test
-scripts/                           NuGet validation scripts
-docs/                              Authorization design documentation
-AutoPolicy.slnx                    Development solution
-```
+The package targets `.NET 10` and references the shared `Microsoft.AspNetCore.App` framework rather than splitting ASP.NET Core support into another AutoPolicy package.
 
-Development commands:
+The repository workflow continuously checks:
+
+- Release-configuration tests;
+- package creation;
+- NuGet package metadata and contents;
+- clean packaged-consumer restore;
+- packaged-consumer smoke execution.
+
+Run the same core checks locally:
 
 ```bash
 dotnet test AutoPolicy.slnx --configuration Release
@@ -337,6 +391,18 @@ dotnet pack src/AutoPolicy/AutoPolicy.csproj --configuration Release --output ar
 
 ```powershell
 ./scripts/Validate-Packages.ps1 -ArtifactsPath ./artifacts
+```
+
+## Repository
+
+```text
+src/AutoPolicy/                    AutoPolicy NuGet package source
+tests/AutoPolicy.Tests/            Unit and security tests
+tests/AutoPolicy.TestApp/          Razor Pages integration-test host
+smoke/AutoPolicy.ConsumerSmoke/    Packaged-consumer smoke test
+scripts/                           Package validation scripts
+docs/                              Authorization design documentation
+AutoPolicy.slnx                    Development solution
 ```
 
 See [`docs/AUTHORIZATION.md`](docs/AUTHORIZATION.md) for the authorization contract.
