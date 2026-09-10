@@ -8,6 +8,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/Perry3Dnl/AutoPolicy</PackageProjectUrl>
     <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+    <PackageReleaseNotes>Adds the official AutoPolicy package icon and refreshes GitHub/NuGet branding.</PackageReleaseNotes>
 
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
