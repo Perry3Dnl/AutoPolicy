@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <AutoPolicyVersion>0.1.0</AutoPolicyVersion>
+    <AutoPolicyVersion>0.1.1</AutoPolicyVersion>
 
     <Authors>Perry3D.nl</Authors>
     <Copyright>Copyright (c) 2026 Perry3D.nl</Copyright>
