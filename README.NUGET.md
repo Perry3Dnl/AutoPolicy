@@ -11,10 +11,10 @@ AutoPolicy discovers Razor Pages, maps them to stable permission identities, and
 ## Install
 
 ```bash
-dotnet add package AutoPolicy --version 0.1.0
+dotnet add package AutoPolicy --version 0.1.1
 ```
 
-AutoPolicy `0.1.0` targets .NET 10.
+AutoPolicy `0.1.1` targets .NET 10.
 
 ## Basic setup
 
