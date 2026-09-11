@@ -4,6 +4,14 @@ All notable changes to AutoPolicy are documented in this file.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-09-11
+
+### Changed
+
+- Replaced the NuGet README's raw HTML header with NuGet-safe Markdown so the package page renders cleanly.
+- Simplified the NuGet package description to the concise AutoPolicy tagline.
+- Updated the embedded NuGet README installation example to version `0.1.2`.
+
 ## [0.1.1] - 2026-09-10
 
 ### Changed
