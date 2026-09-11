@@ -1,10 +1,6 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Perry3Dnl/AutoPolicy/main/assets/autopolicy-icon.png" alt="AutoPolicy icon" width="96" />
-</p>
+# AutoPolicy
 
-<h1 align="center">AutoPolicy</h1>
-
-<p align="center"><strong>Automatic, default-deny route permissions for ASP.NET Core Razor Pages.</strong></p>
+**Automatic, default-deny route permissions for ASP.NET Core Razor Pages.**
 
 AutoPolicy discovers Razor Pages, maps them to stable permission identities, and evaluates access through ASP.NET Core authorization. Normal pages require no AutoPolicy attributes, policy strings, custom base classes, or injected permission services.
 
