@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "v*"
+    branches:
+      - "release/v*"
   pull_request:
     paths:
       - ".github/workflows/release.yml"
@@ -71,6 +73,12 @@ jobs:
                   throw "Release tag must point at the current main commit. Tag: $env:GITHUB_SHA; main: $mainSha"
               }
           }
+          elseif ($env:GITHUB_REF_TYPE -eq "branch") {
+              $expectedBranch = "release/v$version"
+              if ($env:GITHUB_REF_NAME -ne $expectedBranch) {
+                  throw "Release branch '$env:GITHUB_REF_NAME' does not match package version '$version'. Expected '$expectedBranch'."
+              }
+          }
 
       - name: Test
         run: dotnet test AutoPolicy.slnx --configuration Release
@@ -104,7 +112,7 @@ jobs:
 
   publish:
     name: Publish to NuGet.org
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/release/v')
     needs: build-and-validate
     runs-on: ubuntu-latest
     environment: release
@@ -123,6 +131,20 @@ jobs:
         with:
           name: autopolicy-release-package
           path: artifacts
+
+      - name: Create release tag from main
+        if: startsWith(github.ref, 'refs/heads/release/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build-and-validate.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/tags/${TAG}" \
+            -f sha="${MAIN_SHA}"
 
       - name: NuGet login via Trusted Publishing
         uses: NuGet/login@v1
