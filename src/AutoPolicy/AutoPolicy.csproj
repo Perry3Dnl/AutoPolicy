@@ -8,7 +8,7 @@
     <AssemblyName>AutoPolicy</AssemblyName>
     <PackageId>AutoPolicy</PackageId>
     <Version>$(AutoPolicyVersion)</Version>
-    <Description>Automatically turns ASP.NET Core Razor Pages into permission identities, then applies roles, groups, grants, and deny-wins overrides through the standard authorization pipeline.</Description>
+    <Description>Automatic, default-deny route permissions for ASP.NET Core Razor Pages.</Description>
     <PackageTags>aspnetcore;authorization;razorpages;permissions;policy</PackageTags>
     <IsPackable>true</IsPackable>
     <PackageReadmeFile>README.NUGET.md</PackageReadmeFile>
