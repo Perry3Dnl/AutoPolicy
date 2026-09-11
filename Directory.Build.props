@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <AutoPolicyVersion>0.1.1</AutoPolicyVersion>
+    <AutoPolicyVersion>0.1.2</AutoPolicyVersion>
 
     <Authors>Perry3D.nl</Authors>
     <Copyright>Copyright (c) 2026 Perry3D.nl</Copyright>
@@ -8,7 +8,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/Perry3Dnl/AutoPolicy</PackageProjectUrl>
     <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
-    <PackageReleaseNotes>Adds the official AutoPolicy package icon and refreshes GitHub/NuGet branding.</PackageReleaseNotes>
+    <PackageReleaseNotes>Fixes NuGet.org package presentation with a NuGet-safe Markdown README and concise package description.</PackageReleaseNotes>
 
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
