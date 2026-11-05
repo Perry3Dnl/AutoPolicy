@@ -40,4 +40,4 @@ public sealed class BlazorAuthorizationTests
 }
 
 [Route("/blazor/probe")]
-public sealed class BlazorProbeComponent : ComponentBase;
+public sealed class BlazorProbeComponent : ComponentBase { }
