@@ -22,7 +22,7 @@ public sealed class MinimalApiAuthorizationTests : IClassFixture<WebApplicationF
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/analytics")).StatusCode);
 
         using var allowedRoutePermission = new HttpRequestMessage(HttpMethod.Get, "/api/analytics");
-        allowedRoutePermission.Headers.Add("X-AutoPolicy-Allow", "/api/analytics");
+        allowedRoutePermission.Headers.Add("X-AutoPolicy-Allow", "*");
         Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(allowedRoutePermission)).StatusCode);
 
         using var wrongPermission = new HttpRequestMessage(HttpMethod.Post, "/api/packages/upload");
