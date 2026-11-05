@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
+using BlazorRouteData = Microsoft.AspNetCore.Components.RouteData;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -149,7 +150,7 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
                 return true;
             }
 
-            if (context.Resource is RouteData routeData
+            if (context.Resource is BlazorRouteData routeData
                 && TryResolveComponentPermissionKey(routeData, out var componentKey))
             {
                 key = componentKey;
@@ -192,7 +193,7 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
         return false;
     }
 
-    private bool TryResolveComponentPermissionKey(RouteData routeData, out string key)
+    private bool TryResolveComponentPermissionKey(BlazorRouteData routeData, out string key)
     {
         var template = routeData.Template;
         if (string.IsNullOrWhiteSpace(template))
@@ -255,7 +256,7 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
     private static string? GetAuthorizationResourceName(object? resource) =>
         resource switch
         {
-            RouteData routeData => routeData.PageType.FullName,
+            BlazorRouteData routeData => routeData.PageType.FullName,
             HubInvocationContext hubInvocation => hubInvocation.Hub.GetType().FullName,
             _ => null
         };
