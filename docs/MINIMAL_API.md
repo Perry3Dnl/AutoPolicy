@@ -19,6 +19,8 @@ app.MapPost("/packages/upload", UploadPackage);
 
 No per-endpoint AutoPolicy call is needed. Unless an endpoint is explicitly anonymous, its route pattern becomes its permission key (`/analytics`, `/packages/upload`). The key is discovered when the endpoint is authorized and registered with the shared permission registry. With no matching grant, AutoPolicy denies the request.
 
+Optional and catch-all route syntax is normalized for permission identities. For example, `/api/items/{id?}` uses `/api/items/{id}`, and `/api/files/{*path}` uses `/api/files/{path}`. Runtime route values don't become permission keys.
+
 ASP.NET Core authorization policies remain active. AutoPolicy adds its permission requirement to fallback, default, and named authorization policies, so adding another `[Authorize]` policy does not bypass the permission check.
 
 ## Public endpoints
