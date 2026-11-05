@@ -187,7 +187,7 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
         if (string.IsNullOrWhiteSpace(endpointKey)
             && httpContext.GetEndpoint() is RouteEndpoint routeEndpoint)
         {
-            endpointKey = routeEndpoint.RoutePattern.RawText;
+            endpointKey = AutoPolicyRoutePattern.ToPermissionKey(routeEndpoint.RoutePattern.RawText);
         }
 
         if (!string.IsNullOrWhiteSpace(endpointKey))
@@ -220,7 +220,7 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
 
         if (!string.IsNullOrWhiteSpace(template))
         {
-            key = AutoPolicyPermissionKeyResolver.Resolve(template, _options.Value);
+            key = AutoPolicyPermissionKeyResolver.Resolve(AutoPolicyRoutePattern.ToPermissionKey(template), _options.Value);
             return true;
         }
 
