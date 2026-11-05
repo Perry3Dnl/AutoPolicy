@@ -43,7 +43,7 @@ internal sealed class AutoPolicyPageApplicationModelProvider : IPageApplicationM
 
         if (!model.EndpointMetadata.OfType<AutoPolicyMetadata>().Any())
         {
-            model.EndpointMetadata.Add(new AutoPolicyMetadata(key));
+            model.EndpointMetadata.Add(new AutoPolicyMetadata(key, shouldProtect));
         }
 
         if (shouldProtect
