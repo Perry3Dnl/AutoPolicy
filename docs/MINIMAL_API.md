@@ -1,6 +1,6 @@
 # ASP.NET Core endpoint authorization
 
-AutoPolicy protects ASP.NET Core endpoint-routed requests by default through the authorization system's fallback policy. This covers MVC controllers, Razor Pages, Minimal APIs, and SignalR connection endpoints that reach `UseAuthorization()`. A request without a matching permission is denied unless it is marked `AllowAnonymous`.
+AutoPolicy protects ASP.NET Core endpoint-routed requests by default through the authorization system's fallback policy. This covers MVC controllers, Razor Pages, Minimal APIs, gRPC RPC endpoints, mapped static asset endpoints, and SignalR connection endpoints that reach `UseAuthorization()`. A request without a matching permission is denied unless it is marked `AllowAnonymous`.
 
 ## Default protection
 
@@ -58,6 +58,22 @@ builder.Services.AddAutoPolicy(options =>
 app.MapGet("/analytics", GetAnalytics)
     .RequireAutoPolicy("Dashboard.Analytics.View");
 ```
+## gRPC services
+
+gRPC services mapped with `MapGrpcService` use ASP.NET Core endpoint routing, so each RPC is protected by the fallback policy without adding per-service authorization attributes. The RPC route becomes the permission key (for example, `/test.Probe/Get` for a service named `test.Probe` and a method named `Get`).
+
+A streaming RPC is authorized when its call starts. If permission must be rechecked for each message in a long-lived stream, add application-level checks in the service or a gRPC interceptor.
+
+## Static assets
+
+Static files mapped with `MapStaticAssets()` are endpoint-routed and receive default AutoPolicy protection. Grant their route permissions or mark the static asset endpoints anonymous when the assets are public:
+
+```csharp
+app.MapStaticAssets().Add(endpointBuilder =>
+    endpointBuilder.Metadata.Add(new AllowAnonymousAttribute()));
+```
+
+That convention makes all mapped static assets public. The traditional `UseStaticFiles()` middleware is commonly placed before `UseAuthorization()` and then bypasses endpoint authorization entirely. Treat that as an explicit public-assets choice.
 ## MVC and endpoint-routed frameworks
 
 MVC controller actions and Razor Pages are protected when they are mapped into endpoint routing and the request passes through `UseAuthorization()`. Route patterns are the permission keys for these endpoints. Existing `[Authorize]` policies continue to apply, and AutoPolicy adds its permission check to them. Standard `[AllowAnonymous]` metadata remains public.
