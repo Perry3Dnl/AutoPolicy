@@ -91,6 +91,26 @@ For example:
 
 still requires `/Members/Detail` whether the request is `/members/12`, `/members/900`, or `/members/12?tab=history`.
 
+## Minimal API endpoints
+
+Use `RequireAutoPolicy` to protect Minimal API endpoints with the same access provider and permission evaluator:
+
+```csharp
+app.MapGet("/analytics", GetAnalytics)
+    .RequireAutoPolicy("Dashboard.Analytics.View");
+
+app.MapPost("/packages/upload", UploadPackage)
+    .RequireAutoPolicy("Dashboard.Packages.Upload");
+```
+
+Omit the key to use the endpoint route pattern as its permission key:
+
+```csharp
+app.MapGet("/analytics", GetAnalytics).RequireAutoPolicy();
+```
+
+AutoPolicy discovers marked endpoints and registers their permissions at startup. Unmatched requests are denied. See [Minimal API authorization](docs/MINIMAL_API.md) for route groups and details.
+
 ## 🔌 Bring your own permission storage
 
 AutoPolicy defines and evaluates access. Your application still owns authentication, users, persistence, role assignment, group assignment, direct grants/denies, and administration UI.
