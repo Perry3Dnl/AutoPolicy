@@ -41,11 +41,31 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
             return;
         }
 
+        var endpointMetadata = httpContext.GetEndpoint()?.Metadata.GetMetadata<AutoPolicyMetadata>();
+        if (endpointMetadata is { IsProtected: false })
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
         if (!TryResolvePermissionKey(httpContext, requirement, out var key))
         {
             _logger.LogWarning("Path permission mapping could not be resolved. Denying the request.");
             context.Fail();
             return;
+        }
+
+        if (!_registry.Contains(key)
+            && _options.Value.MinimalApisProtectedByDefault
+            && httpContext.GetEndpoint() is RouteEndpoint routeEndpoint
+            && _registry is PermissionRegistry mutableRegistry)
+        {
+            mutableRegistry.TryAdd(
+                new PermissionRegistration(
+                    key,
+                    relativePath: routeEndpoint.DisplayName,
+                    isProtected: true),
+                routeEndpoint.DisplayName ?? "Minimal API endpoint");
         }
 
         if (!_registry.Contains(key))
