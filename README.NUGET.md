@@ -51,6 +51,26 @@ receives the canonical permission:
 
 Custom `@page` templates, route values, query strings, and fragments do not change that identity.
 
+## Minimal API endpoints
+
+Use `RequireAutoPolicy` to protect Minimal API endpoints with the same access provider and permission evaluator:
+
+```csharp
+app.MapGet("/analytics", GetAnalytics)
+    .RequireAutoPolicy("Dashboard.Analytics.View");
+
+app.MapPost("/packages/upload", UploadPackage)
+    .RequireAutoPolicy("Dashboard.Packages.Upload");
+```
+
+Omit the key to use the endpoint route pattern as its permission key:
+
+```csharp
+app.MapGet("/analytics", GetAnalytics).RequireAutoPolicy();
+```
+
+See [Minimal API authorization](https://github.com/Perry3Dnl/AutoPolicy/blob/main/docs/MINIMAL_API.md) for details.
+
 ## Bring your own permission storage
 
 AutoPolicy does not manage users, accounts, persistence, or permission assignments. Implement `IAutoPolicyAccessProvider` to integrate an existing permission system:
