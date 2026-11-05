@@ -67,12 +67,64 @@ public static class AutoPolicyServiceCollectionExtensions
             });
         });
 
+        DecorateAuthorizationPolicyProvider(services);
         DecorateAuthorizationResultHandler(services);
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IPageApplicationModelProvider, AutoPolicyPageApplicationModelProvider>());
         services.AddHostedService<AutoPolicyStartupValidator>();
         return services;
+    }
+
+    private static void DecorateAuthorizationPolicyProvider(IServiceCollection services)
+    {
+        var existing = services.LastOrDefault(descriptor =>
+            descriptor.ServiceType == typeof(IAuthorizationPolicyProvider)
+            && !descriptor.IsKeyedService);
+
+        if (existing is not null)
+        {
+            services.Remove(existing);
+        }
+
+        var lifetime = existing?.Lifetime ?? ServiceLifetime.Singleton;
+        services.Add(ServiceDescriptor.Describe(
+            typeof(IAuthorizationPolicyProvider),
+            serviceProvider => new AutoPolicyAuthorizationPolicyProvider(
+                ResolveAuthorizationPolicyProvider(existing, serviceProvider),
+                serviceProvider.GetRequiredService<IOptions<AutoPolicyOptions>>()),
+            lifetime));
+    }
+
+    private static IAuthorizationPolicyProvider ResolveAuthorizationPolicyProvider(
+        ServiceDescriptor? descriptor,
+        IServiceProvider serviceProvider)
+    {
+        if (descriptor is null)
+        {
+            return new DefaultAuthorizationPolicyProvider(
+                serviceProvider.GetRequiredService<IOptions<AuthorizationOptions>>());
+        }
+
+        if (descriptor.ImplementationInstance is IAuthorizationPolicyProvider instance)
+        {
+            return instance;
+        }
+
+        if (descriptor.ImplementationFactory is not null)
+        {
+            return (IAuthorizationPolicyProvider)descriptor.ImplementationFactory(serviceProvider);
+        }
+
+        if (descriptor.ImplementationType is not null)
+        {
+            return (IAuthorizationPolicyProvider)ActivatorUtilities.GetServiceOrCreateInstance(
+                serviceProvider,
+                descriptor.ImplementationType);
+        }
+
+        throw new InvalidOperationException(
+            "The existing IAuthorizationPolicyProvider registration could not be decorated.");
     }
 
     private static void DecorateAuthorizationResultHandler(IServiceCollection services)
