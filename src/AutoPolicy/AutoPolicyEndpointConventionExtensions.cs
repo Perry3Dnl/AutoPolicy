@@ -42,7 +42,7 @@ public static class AutoPolicyEndpointConventionExtensions
             if (endpointPermissionKey is null
                 && endpointBuilder is RouteEndpointBuilder routeEndpointBuilder)
             {
-                endpointPermissionKey = routeEndpointBuilder.RoutePattern.RawText;
+                endpointPermissionKey = AutoPolicyRoutePattern.ToPermissionKey(routeEndpointBuilder.RoutePattern.RawText);
             }
 
             endpointBuilder.Metadata.Add(new AutoPolicyMetadata(endpointPermissionKey));
