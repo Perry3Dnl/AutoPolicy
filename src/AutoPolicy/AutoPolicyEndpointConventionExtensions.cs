@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace AutoPolicy;
 
@@ -45,8 +47,39 @@ public static class AutoPolicyEndpointConventionExtensions
 
             endpointBuilder.Metadata.Add(new AutoPolicyMetadata(endpointPermissionKey));
             endpointBuilder.Metadata.Add(new AuthorizeAttribute(AutoPolicyDefaults.PolicyName));
+            RegisterPermission(endpointBuilder, endpointPermissionKey);
         });
 
         return builder;
+    }
+
+    private static void RegisterPermission(EndpointBuilder endpointBuilder, string? permissionKey)
+    {
+        if (string.IsNullOrWhiteSpace(permissionKey))
+        {
+            return;
+        }
+
+        var services = endpointBuilder.ApplicationServices;
+        var registry = services.GetService<PermissionRegistry>();
+        var options = services.GetService<IOptions<AutoPolicyOptions>>()?.Value;
+        if (registry is null)
+        {
+            return;
+        }
+
+        var canonicalKey = options is null
+            ? AutoPolicy.PermissionKey.Normalize(permissionKey)
+            : AutoPolicyPermissionKeyResolver.Resolve(permissionKey, options);
+
+        if (!registry.Contains(canonicalKey))
+        {
+            registry.TryAdd(
+                new PermissionRegistration(
+                    canonicalKey,
+                    relativePath: endpointBuilder.DisplayName,
+                    isProtected: true),
+                endpointBuilder.DisplayName ?? "Minimal API endpoint");
+        }
     }
 }
