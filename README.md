@@ -12,7 +12,7 @@
 
 **Automatic, default-deny permissions for ASP.NET Core routes and server-rendered applications.**
 
-AutoPolicy discovers Razor Pages and protects ASP.NET Core endpoint-routed requests by default, including MVC, Minimal APIs, gRPC RPCs, mapped static assets, and SignalR connections and hub methods. It evaluates access through ASP.NET Core authorization. Normal endpoints need no AutoPolicy attributes or per-endpoint calls.
+AutoPolicy discovers Razor Pages and protects ASP.NET Core endpoint-routed requests by default, including MVC, Minimal APIs, Razor Components static SSR, gRPC RPCs, mapped static assets, and SignalR connections and hub methods. It evaluates access through ASP.NET Core authorization. Normal endpoints need no AutoPolicy attributes or per-endpoint calls.
 
 [**NuGet**](https://www.nuget.org/packages/AutoPolicy) · [**Authorization design**](docs/AUTHORIZATION.md) · [**Changelog**](CHANGELOG.md)
 
