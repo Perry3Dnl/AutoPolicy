@@ -27,6 +27,18 @@ public sealed class RouteTemplateAuthorizationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
+    public async Task RootPath_IsProtectedAndUsesSlashPermission()
+    {
+        using var client = _factory.CreateClient();
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/")).StatusCode);
+
+        using var allowed = new HttpRequestMessage(HttpMethod.Get, "/");
+        allowed.Headers.Add("X-AutoPolicy-Allow", "/");
+        Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(allowed)).StatusCode);
+    }
+
+    [Fact]
     public async Task OptionalRouteTemplate_UsesStablePermissionKey()
     {
         using var client = _factory.CreateClient();
