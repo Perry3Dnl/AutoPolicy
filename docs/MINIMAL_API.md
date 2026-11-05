@@ -1,6 +1,6 @@
 # ASP.NET Core endpoint authorization
 
-AutoPolicy protects ASP.NET Core endpoint-routed requests by default through the authorization system's fallback policy. This covers MVC controllers, Razor Pages, Minimal APIs, gRPC RPC endpoints, mapped static asset endpoints, and SignalR connection endpoints that reach `UseAuthorization()`. A request without a matching permission is denied unless it is marked `AllowAnonymous`.
+AutoPolicy protects ASP.NET Core endpoint-routed requests by default through the authorization system's fallback policy. This covers MVC controllers, Razor Pages, Minimal APIs, Razor Components static SSR routes, gRPC RPC endpoints, mapped static asset endpoints, and SignalR connection endpoints that reach `UseAuthorization()`. A request without a matching permission is denied unless it is marked `AllowAnonymous`.
 
 ## Default protection
 
@@ -84,7 +84,12 @@ MVC controller actions and Razor Pages are protected when they are mapped into e
 
 AutoPolicy protects the hub connection endpoint and each hub method. The connection uses its mapped route permission. Hub methods use a key based on the hub and method name, for example `/SignalR/Chat/SendMessage`. A custom claims provider can grant these keys like other permission keys.
 
+## Razor Components static SSR
+
+Razor Components mapped with `MapRazorComponents<App>()` are endpoint-routed. Their initial HTTP requests are protected by the same fallback policy as other routes, including when the component is rendered with static SSR. The route pattern supplies the permission key.
+
 ## Interactive server-side Blazor
+
 
 Interactive component navigation runs through Blazor's router, so it does not pass through endpoint authorization for every navigation. Protect all routed components with the standard authorization view and a global component attribute:
 
