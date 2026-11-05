@@ -2,7 +2,7 @@
 
 **Status:** `0.1.0` authorization contract
 
-AutoPolicy is an authorization library for ASP.NET Core Razor Pages. It discovers permission identities and evaluates access; it deliberately does not become an identity, account-management, or permission-persistence system.
+AutoPolicy is an authorization library for ASP.NET Core applications. It discovers Razor Page permissions, protects endpoint-routed requests by default, and evaluates access through the standard authorization system. It does not provide identity, account-management, or permission-persistence systems.
 
 ## 1. Minimal page usage
 
@@ -35,6 +35,13 @@ Areas/BackOffice/Pages/Dashboard.cshtml
 → /BackOffice/Dashboard
 ```
 
+### Other ASP.NET Core surfaces
+
+Requests routed through ASP.NET Core authorization use endpoint route patterns as permission keys. This includes MVC, Minimal APIs, gRPC RPCs, mapped static assets, and SignalR connection endpoints. Listening ports and HTTP methods aren't part of those permission keys, so the same route permission applies to that route on each listener and for each HTTP method. Use `RequireAutoPolicy(...)` when an operation needs a separate capability key.
+
+SignalR hub methods receive separate `/SignalR/{Hub}/{Method}` permissions. Interactive server-side Blazor navigation runs through the component router: add `[Authorize]` in the app's `_Imports.razor` and pass route data to `AuthorizeRouteView` to protect routed components. Custom providers used for component authorization should implement `IAutoPolicyPrincipalAccessProvider`.
+
+`MapStaticAssets()` creates endpoints and is protected by default. Static file middleware placed before `UseAuthorization()` serves files outside endpoint authorization. See [endpoint authorization](MINIMAL_API.md) for framework-specific setup and boundaries.
 ## 2. Ownership boundary
 
 ### The host application owns
@@ -51,6 +58,8 @@ Areas/BackOffice/Pages/Dashboard.cshtml
 
 - canonical permission identities
 - automatic Razor Page discovery
+- route-based endpoint permission discovery
+- SignalR hub-method authorization
 - explicit non-route permission registration
 - role and group definitions
 - role/group expansion
@@ -109,7 +118,7 @@ public sealed class ApplicationAccessProvider : IAutoPolicyAccessProvider
 
 The provider may use claims, Identity, session state, SQL, Redis, tenant information, an external API, or any application-specific source.
 
-The access snapshot is cached for the HTTP request so endpoint authorization and multiple in-page checks use the same resolved state.
+The HTTP access snapshot is cached per request so endpoint authorization and multiple in-page checks use the same state. Interactive Blazor route authorization can use the principal-only `IAutoPolicyPrincipalAccessProvider` interface.
 
 If no custom provider is registered, AutoPolicy uses authenticated claims as a convenience adapter. Anonymous identities contribute no access.
 
@@ -213,10 +222,11 @@ Applications may also configure exact or prefix anonymous patterns:
 options.AllowAnonymous("/Account/Login", "/Public/*");
 ```
 
-Bare `AllowAnonymous("*")` is rejected. An intentional global opt-out is expressed explicitly:
+Bare `AllowAnonymous("*")` is rejected. Razor Pages and endpoint routing have independent default-protection switches. An intentional opt-out is expressed explicitly:
 
 ```csharp
 options.ProtectRazorPagesByDefault(false);
+options.ProtectEndpointsByDefault(false);
 ```
 
 When default protection is disabled, `[AutoPolicy]` opts an individual PageModel back into automatic permission protection.
