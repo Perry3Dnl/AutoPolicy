@@ -2,7 +2,7 @@
 
 **Automatic, default-deny permissions for ASP.NET Core routes and server-rendered applications.**
 
-AutoPolicy discovers Razor Pages and protects endpoint-routed requests by default, including MVC, Minimal APIs, gRPC RPCs, mapped static assets, SignalR connections, and hub methods. Normal endpoints need no AutoPolicy attributes or per-endpoint calls.
+AutoPolicy discovers Razor Pages and protects endpoint-routed requests by default, including MVC, Minimal APIs, Razor Components static SSR, gRPC RPCs, mapped static assets, SignalR connections, and hub methods. Normal endpoints need no AutoPolicy attributes or per-endpoint calls.
 
 ## Install
 
@@ -53,7 +53,7 @@ Custom `@page` templates, route values, query strings, and fragments do not chan
 
 ## ASP.NET Core endpoints and Blazor
 
-All endpoint-routed requests that reach `UseAuthorization()` are protected by default, including MVC, Razor Pages, Minimal APIs, gRPC RPCs, mapped static assets, and SignalR connection endpoints. Unmarked endpoints are denied unless the user has the route permission. HTTP method and port aren't part of endpoint permission keys. Use `.AllowAnonymous()` for public endpoints. `.RequireAutoPolicy("...")` is optional when you want a capability key instead of the route pattern.
+All endpoint-routed requests that reach `UseAuthorization()` are protected by default, including MVC, Razor Pages, Minimal APIs, Razor Components static SSR, gRPC RPCs, mapped static assets, and SignalR connection endpoints. Unmarked endpoints are denied unless the user has the route permission. HTTP method and port aren't part of endpoint permission keys. Use `.AllowAnonymous()` for public endpoints. `.RequireAutoPolicy("...")` is optional when you want a capability key instead of the route pattern.
 
 SignalR hub method calls are also checked by default. The hub connection endpoint and each hub method use separate permission keys.
 
