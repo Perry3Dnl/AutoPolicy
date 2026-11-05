@@ -27,14 +27,21 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
     public Task StartAsync(CancellationToken cancellationToken)
     {
         var endpoints = _endpointDataSource.Endpoints;
-
         var options = _options.Value;
+        var discoveryErrors = new List<string>();
+
+        DiscoverMinimalApiPermissions(endpoints, options, discoveryErrors);
+
         var result = PermissionModelValidator.Validate(
             options.Model,
             _registry,
             strict: options.StrictValidation);
 
-        DiscoverMinimalApiPermissions(endpoints, options, result);
+        foreach (var error in discoveryErrors)
+        {
+            result.AddError(error);
+        }
+
         ValidateOverrides(options, result);
         ValidateAliases(options, result);
 
@@ -73,7 +80,7 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
     private void DiscoverMinimalApiPermissions(
         IReadOnlyList<Endpoint> endpoints,
         AutoPolicyOptions options,
-        PermissionValidationResult result)
+        ICollection<string> errors)
     {
         foreach (var endpoint in endpoints)
         {
@@ -92,7 +99,7 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
 
             if (string.IsNullOrWhiteSpace(permissionKey))
             {
-                result.AddError(
+                errors.Add(
                     $"AutoPolicy could not discover a permission key for endpoint '{endpoint.DisplayName}'. "
                     + "Supply a permission key to RequireAutoPolicy(...).");
                 continue;
@@ -105,7 +112,7 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
             }
             catch (Exception ex)
             {
-                result.AddError(
+                errors.Add(
                     $"AutoPolicy could not resolve permission key '{permissionKey}' for endpoint "
                     + $"'{endpoint.DisplayName}': {ex.Message}");
                 continue;
