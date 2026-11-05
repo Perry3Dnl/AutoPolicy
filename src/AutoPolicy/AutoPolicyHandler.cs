@@ -142,10 +142,10 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
                 return true;
             }
 
-            if (httpContext is not null
-                && TryResolveHttpPermissionKey(httpContext, out var httpKey))
+            if (context.Resource is HubInvocationContext hubInvocation
+                && TryResolveHubPermissionKey(hubInvocation, out var hubKey))
             {
-                key = httpKey;
+                key = hubKey;
                 return true;
             }
 
@@ -156,10 +156,10 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
                 return true;
             }
 
-            if (context.Resource is HubInvocationContext hubInvocation
-                && TryResolveHubPermissionKey(hubInvocation, out var hubKey))
+            if (httpContext is not null
+                && TryResolveHttpPermissionKey(httpContext, out var httpKey))
             {
-                key = hubKey;
+                key = httpKey;
                 return true;
             }
         }
