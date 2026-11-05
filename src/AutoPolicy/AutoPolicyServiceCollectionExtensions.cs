@@ -14,8 +14,9 @@ namespace AutoPolicy;
 public static class AutoPolicyServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds automatic Razor Page permission discovery, authorization handling, startup validation,
-    /// in-page permission services, and the built-in claims access provider fallback.
+    /// Adds automatic Razor Page discovery, default authorization for endpoint-routed requests and
+    /// SignalR hub methods, startup validation, in-page permission services, and the built-in claims
+    /// access provider fallback.
     /// </summary>
     /// <remarks>
     /// Register a custom <see cref="IAutoPolicyAccessProvider"/> before calling this method when the
