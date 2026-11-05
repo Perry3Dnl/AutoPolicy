@@ -37,11 +37,11 @@ Areas/BackOffice/Pages/Dashboard.cshtml
 
 ### Other ASP.NET Core surfaces
 
-Requests routed through ASP.NET Core authorization use endpoint route patterns as permission keys. This includes MVC, Minimal APIs, gRPC RPCs, mapped static assets, and SignalR connection endpoints. Listening ports and HTTP methods aren't part of those permission keys, so the same route permission applies to that route on each listener and for each HTTP method. Use `RequireAutoPolicy(...)` when an operation needs a separate capability key.
+Requests routed through ASP.NET Core authorization use endpoint route patterns as permission keys. This includes MVC, Minimal APIs, Razor Components static SSR routes, gRPC RPCs, mapped static assets, and SignalR connection endpoints. Listening ports and HTTP methods aren't part of those permission keys, so the same route permission applies to that route on each listener and for each HTTP method. Use `RequireAutoPolicy(...)` when an operation needs a separate capability key.
 
 SignalR hub methods receive separate `/SignalR/{Hub}/{Method}` permissions. Interactive server-side Blazor navigation runs through the component router: add `[Authorize]` in the app's `_Imports.razor` and pass route data to `AuthorizeRouteView` to protect routed components. Custom providers used for component authorization should implement `IAutoPolicyPrincipalAccessProvider`.
 
-`MapStaticAssets()` creates endpoints and is protected by default. Static file middleware placed before `UseAuthorization()` serves files outside endpoint authorization. See [endpoint authorization](MINIMAL_API.md) for framework-specific setup and boundaries.
+`MapRazorComponents<App>()` creates route endpoints protected by the fallback policy for each HTTP request, including static SSR. Interactive navigation uses the separate component-router integration described above. `MapStaticAssets()` creates endpoints and is protected by default. Static file middleware placed before `UseAuthorization()` serves files outside endpoint authorization. See [endpoint authorization](MINIMAL_API.md) for framework-specific setup and boundaries.
 ## 2. Ownership boundary
 
 ### The host application owns
