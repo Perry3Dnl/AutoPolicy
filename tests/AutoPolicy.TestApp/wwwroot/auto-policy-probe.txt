@@ -1,0 +1,1 @@
+AutoPolicy static asset probe
