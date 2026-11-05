@@ -35,7 +35,7 @@ AutoPolicy discovers Razor Pages and protects ASP.NET Core endpoint-routed reque
 
 | Package | Target | Purpose |
 | --- | --- | --- |
-| [`AutoPolicy`](https://www.nuget.org/packages/AutoPolicy) | `net10.0` | Razor Page discovery, permission registry, access evaluation, claims integration, and ASP.NET Core authorization |
+| [`AutoPolicy`](https://www.nuget.org/packages/AutoPolicy) | `net10.0` | Razor Page discovery, endpoint and SignalR authorization, server-side Blazor route support, permission registry, access evaluation, and claims integration |
 
 Install:
 
