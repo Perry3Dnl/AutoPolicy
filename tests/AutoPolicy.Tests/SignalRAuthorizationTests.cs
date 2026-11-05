@@ -41,7 +41,7 @@ public sealed class SignalRAuthorizationTests : IClassFixture<WebApplicationFact
                 options.Transports = HttpTransportType.LongPolling;
                 options.Headers.Add(
                     "X-AutoPolicy-Allow",
-                    string.Join(",", new[] { "/hubs/probe" }.Concat(methodPermissions)));
+                    string.Join(",", new[] { "/hubs/*" }.Concat(methodPermissions)));
             })
             .Build();
 
