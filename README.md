@@ -19,7 +19,7 @@ AutoPolicy discovers Razor Pages and protects ASP.NET Core endpoint-routed reque
 ## ✨ Features
 
 - ✅ Automatic Razor Page permission discovery
-- ✅ **Default-deny** protection for Razor Pages and endpoint-routed requests (MVC, Minimal APIs, SignalR)
+- ✅ **Default-deny** protection for Razor Pages and endpoint-routed requests (MVC, Minimal APIs, gRPC, mapped static assets, SignalR)
 - ✅ Stable permission identities derived from Razor Page paths
 - ✅ Roles, groups, and direct permission grants
 - ✅ **Deny wins** over every matching allow
@@ -40,7 +40,7 @@ AutoPolicy discovers Razor Pages and protects ASP.NET Core endpoint-routed reque
 Install:
 
 ```bash
-dotnet add package AutoPolicy --version 0.1.1
+dotnet add package AutoPolicy --version 0.1.2
 ```
 
 ## 🚀 Quick start
@@ -94,14 +94,14 @@ still requires `/Members/Detail` whether the request is `/members/12`, `/members
 
 ## Endpoint authorization
 
-All ASP.NET Core endpoints that pass through `UseAuthorization()` are protected by default. This includes MVC controllers, Razor Pages, Minimal APIs, and endpoint-routed requests such as SignalR connections. Requests without a matching permission are denied.
+All ASP.NET Core endpoints that pass through `UseAuthorization()` are protected by default. This includes MVC controllers, Razor Pages, Minimal APIs, gRPC RPCs, mapped static assets, and SignalR connections. Requests without a matching permission are denied.
 
 ```csharp
 app.MapGet("/analytics", GetAnalytics);
 app.MapPost("/packages/upload", UploadPackage);
 ```
 
-The route pattern becomes the permission key. Use `.AllowAnonymous()` for public endpoints, or `.RequireAutoPolicy("Dashboard.Analytics.View")` when an endpoint needs a capability key that differs from its route. See [endpoint authorization](docs/MINIMAL_API.md).
+The route pattern becomes the permission key; HTTP method and port aren't part of the key. Use `.AllowAnonymous()` for public endpoints, or `.RequireAutoPolicy("Dashboard.Analytics.View")` when an endpoint needs a capability key that differs from its route. See [endpoint authorization](docs/MINIMAL_API.md).
 
 ### Interactive server-side Blazor
 
@@ -121,6 +121,7 @@ Pass route data as the authorization resource in the router:
 ```
 
 Public components can opt out with `[AllowAnonymous]`. The built-in claims provider supports component authorization; custom providers should implement `IAutoPolicyPrincipalAccessProvider` as well as `IAutoPolicyAccessProvider`. Blazor WebAssembly client-side checks do not secure server data, so protect the backing endpoints too.
+
 ## 🔌 Bring your own permission storage
 
 AutoPolicy defines and evaluates access. Your application still owns authentication, users, persistence, role assignment, group assignment, direct grants/denies, and administration UI.
