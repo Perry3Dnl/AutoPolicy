@@ -12,6 +12,7 @@ builder.Services.AddRazorComponents();
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddGrpc();
+builder.Services.AddHealthChecks();
 builder.Services
     .AddAuthentication(TestAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
@@ -69,6 +70,9 @@ app.MapGet("/api/files/{*path}", (string? path) => Results.Ok(path ?? "none"));
 app.MapGet("/api/named-policy", () => Results.Ok("secured by named policy"))
     .RequireAuthorization("NamedOnly");
 app.MapGet("/api/public", () => Results.Ok("anonymous")).AllowAnonymous();
+var groupedApi = app.MapGroup("/api/grouped");
+groupedApi.MapGet("/probe", () => Results.Ok("grouped endpoint"));
+app.MapHealthChecks("/health");
 
 app.Run();
 
