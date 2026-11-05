@@ -53,6 +53,7 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
         }
 
         if (!_registry.Contains(key)
+            && string.IsNullOrWhiteSpace(requirement.PermissionKey)
             && _options.Value.EndpointsProtectedByDefault
             && _registry is PermissionRegistry mutableRegistry)
         {
