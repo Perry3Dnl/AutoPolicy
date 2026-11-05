@@ -1,8 +1,39 @@
 # Minimal API authorization
 
-AutoPolicy can protect Minimal API endpoints through ASP.NET Core endpoint authorization metadata. The same access provider, permission registry, aliases, roles, groups, wildcard rules, and deny-wins evaluator used by Razor Pages handle these requests.
+AutoPolicy protects ASP.NET Core endpoints by default through the authorization system's fallback policy. Every Minimal API endpoint that reaches `UseAuthorization()` requires a registered permission unless it is marked `AllowAnonymous`.
 
-## Require a named permission
+## Default protection
+
+Configure AutoPolicy as usual:
+
+```csharp
+builder.Services.AddAutoPolicy();
+
+var app = builder.Build();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapGet("/analytics", GetAnalytics);
+app.MapPost("/packages/upload", UploadPackage);
+```
+
+No per-endpoint AutoPolicy call is needed. Unless an endpoint is explicitly anonymous, its route pattern becomes its permission key (`/analytics`, `/packages/upload`). The key is discovered when the endpoint is authorized and registered with the shared permission registry. With no matching grant, AutoPolicy denies the request.
+
+ASP.NET Core authorization policies remain active. AutoPolicy adds its permission requirement to fallback, default, and named authorization policies, so adding another `[Authorize]` policy does not bypass the permission check.
+
+## Public endpoints
+
+Use standard ASP.NET Core `AllowAnonymous` metadata to exclude an endpoint from authorization:
+
+```csharp
+app.MapGet("/health", GetHealth).AllowAnonymous();
+```
+
+Razor Pages continue to use `RazorPagesProtectedByDefault`; disabling that option does not disable the Minimal API fallback policy.
+
+## Explicit permission keys
+
+Use `RequireAutoPolicy` when a permission should have a stable capability name independent of the route:
 
 ```csharp
 app.MapGet("/analytics", GetAnalytics)
@@ -12,41 +43,18 @@ app.MapPost("/packages/upload", UploadPackage)
     .RequireAutoPolicy("Dashboard.Packages.Upload");
 ```
 
-An explicit key is useful when the permission represents an application capability rather than a route. AutoPolicy discovers and registers the key at startup, so it does not need to be repeated in `DefinePermission(...)`.
+Explicit endpoint permissions are discovered and registered at startup. They use the existing access provider, permission registry, aliases, roles, groups, wildcard rules, and deny-wins evaluator.
 
-## Derive the permission from the route
+## Opt out of default endpoint protection
 
-When the route itself is the permission identity, omit the key:
+If an application needs an opt-in model for Minimal APIs, it can turn off the fallback protection. Individual endpoints can still require AutoPolicy explicitly:
 
 ```csharp
+builder.Services.AddAutoPolicy(options =>
+{
+    options.ProtectMinimalApisByDefault(false);
+});
+
 app.MapGet("/analytics", GetAnalytics)
-    .RequireAutoPolicy();
+    .RequireAutoPolicy("Dashboard.Analytics.View");
 ```
-
-This endpoint uses `/analytics` as its registered permission key. Route parameters remain part of the route pattern, so `/packages/{packageId}` maps to `/packages/{packageId}`.
-
-A route group can apply the requirement to all endpoints in that group:
-
-```csharp
-var dashboard = app.MapGroup("/dashboard")
-    .RequireAutoPolicy();
-
-dashboard.MapGet("/analytics", GetAnalytics);
-dashboard.MapPost("/packages/upload", UploadPackage);
-```
-
-For a route group, the route-derived permission includes the group's prefix and the endpoint route.
-
-## Authorization behavior
-
-`RequireAutoPolicy(...)` adds AutoPolicy's ASP.NET Core authorization policy to the endpoint. `UseAuthorization()` must be present in the request pipeline. Requests without a matching grant are denied; explicit deny rules still take precedence over allows.
-
-Endpoints without `RequireAutoPolicy(...)` are not automatically protected by this feature. Razor Page default protection remains controlled separately by `RazorPagesProtectedByDefault`.
-
-Standard ASP.NET Core endpoint authorization continues to work alongside AutoPolicy:
-
-```csharp
-app.MapGet("/health", GetHealth).AllowAnonymous();
-```
-
-Configure an access provider once through `AddAutoPolicy(...)`; endpoint authorization uses that provider and the existing claims fallback.
