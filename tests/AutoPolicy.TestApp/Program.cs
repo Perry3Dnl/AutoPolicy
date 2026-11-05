@@ -49,6 +49,8 @@ app.MapGet("/api/analytics", () => Results.Ok("analytics"))
     .RequireAutoPolicy();
 app.MapPost("/api/packages/upload", () => Results.Ok("uploaded"))
     .RequireAutoPolicy("Dashboard.Packages.Upload");
+app.MapGet("/api/default-deny", () => Results.Ok("secured by fallback policy"));
+app.MapGet("/api/public", () => Results.Ok("anonymous")).AllowAnonymous();
 
 app.Run();
 
