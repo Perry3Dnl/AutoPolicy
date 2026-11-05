@@ -1,6 +1,11 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Routing;
+using BlazorRouteData = Microsoft.AspNetCore.Components.RouteData;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -33,18 +38,40 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
         AutoPolicyRequirement requirement)
     {
         var httpContext = ResolveHttpContext(context);
-        if (httpContext is null)
+        var endpointMetadata = httpContext?.GetEndpoint()?.Metadata.GetMetadata<AutoPolicyMetadata>();
+        if (endpointMetadata is { IsProtected: false })
         {
-            _logger.LogWarning("AutoPolicy could not resolve the current HttpContext. Denying the request.");
+            context.Succeed(requirement);
+            return;
+        }
+
+        if (!TryResolvePermissionKey(context, httpContext, requirement, out var key))
+        {
+            _logger.LogWarning("Permission mapping could not be resolved for the current authorization resource. Denying access.");
             context.Fail();
             return;
         }
 
-        if (!TryResolvePermissionKey(httpContext, requirement, out var key))
+        if (AutoPolicyKeyFactory.MatchesAnonymousPattern(key, _options.Value))
         {
-            _logger.LogWarning("Path permission mapping could not be resolved. Denying the request.");
-            context.Fail();
+            context.Succeed(requirement);
             return;
+        }
+
+        if (!_registry.Contains(key)
+            && string.IsNullOrWhiteSpace(requirement.PermissionKey)
+            && _options.Value.EndpointsProtectedByDefault
+            && _registry is PermissionRegistry mutableRegistry)
+        {
+            mutableRegistry.TryAdd(
+                new PermissionRegistration(
+                    key,
+                    relativePath: httpContext?.GetEndpoint()?.DisplayName
+                        ?? GetAuthorizationResourceName(context.Resource),
+                    isProtected: true),
+                httpContext?.GetEndpoint()?.DisplayName
+                    ?? GetAuthorizationResourceName(context.Resource)
+                    ?? "ASP.NET Core endpoint");
         }
 
         if (!_registry.Contains(key))
@@ -59,17 +86,34 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
         AutoPolicyAccess access;
         try
         {
-            access = await AutoPolicyAccessCache
-                .GetAsync(httpContext, _provider, httpContext.RequestAborted)
-                .ConfigureAwait(false);
+            if (httpContext is not null)
+            {
+                access = await AutoPolicyAccessCache
+                    .GetAsync(httpContext, _provider, httpContext.RequestAborted)
+                    .ConfigureAwait(false);
+            }
+            else if (_provider is IAutoPolicyPrincipalAccessProvider principalProvider)
+            {
+                access = await principalProvider
+                    .GetAccessAsync(context.User)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "The configured IAutoPolicyAccessProvider does not support principal-only authorization. Denying access.");
+                context.Fail();
+                return;
+            }
         }
-        catch (OperationCanceledException) when (httpContext.RequestAborted.IsCancellationRequested)
+        catch (OperationCanceledException) when (
+            httpContext is not null && httpContext.RequestAborted.IsCancellationRequested)
         {
             throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "IAutoPolicyAccessProvider failed while loading access. Denying the request.");
+            _logger.LogError(ex, "The AutoPolicy access provider failed. Denying the request.");
             context.Fail();
             return;
         }
@@ -93,7 +137,8 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
     }
 
     private bool TryResolvePermissionKey(
-        HttpContext httpContext,
+        AuthorizationHandlerContext context,
+        HttpContext? httpContext,
         AutoPolicyRequirement requirement,
         out string key)
     {
@@ -105,10 +150,24 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
                 return true;
             }
 
-            var metadata = httpContext.GetEndpoint()?.Metadata.GetMetadata<AutoPolicyMetadata>();
-            if (metadata is not null)
+            if (context.Resource is HubInvocationContext hubInvocation
+                && TryResolveHubPermissionKey(hubInvocation, out var hubKey))
             {
-                key = AutoPolicyPermissionKeyResolver.Resolve(metadata.Key, _options.Value);
+                key = hubKey;
+                return true;
+            }
+
+            if (context.Resource is BlazorRouteData routeData
+                && TryResolveComponentPermissionKey(routeData, out var componentKey))
+            {
+                key = componentKey;
+                return true;
+            }
+
+            if (httpContext is not null
+                && TryResolveHttpPermissionKey(httpContext, out var httpKey))
+            {
+                key = httpKey;
                 return true;
             }
         }
@@ -121,6 +180,71 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
         return false;
     }
 
+    private bool TryResolveHttpPermissionKey(HttpContext httpContext, out string key)
+    {
+        var metadata = httpContext.GetEndpoint()?.Metadata.GetMetadata<AutoPolicyMetadata>();
+        var endpointKey = metadata?.Key;
+        if (string.IsNullOrWhiteSpace(endpointKey)
+            && httpContext.GetEndpoint() is RouteEndpoint routeEndpoint)
+        {
+            endpointKey = AutoPolicyRoutePattern.ToPermissionKey(routeEndpoint.RoutePattern.RawText);
+        }
+
+        if (!string.IsNullOrWhiteSpace(endpointKey))
+        {
+            key = AutoPolicyPermissionKeyResolver.Resolve(endpointKey, _options.Value);
+            return true;
+        }
+
+        key = string.Empty;
+        return false;
+    }
+
+    private bool TryResolveComponentPermissionKey(BlazorRouteData routeData, out string key)
+    {
+        var template = routeData.Template;
+        if (string.IsNullOrWhiteSpace(template))
+        {
+            var routeAttributes = routeData.PageType
+                .GetCustomAttributes(typeof(RouteAttribute), inherit: false)
+                .Cast<RouteAttribute>()
+                .Select(attribute => attribute.Template)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (routeAttributes.Length == 1)
+            {
+                template = routeAttributes[0];
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(template))
+        {
+            key = AutoPolicyPermissionKeyResolver.Resolve(AutoPolicyRoutePattern.ToPermissionKey(template), _options.Value);
+            return true;
+        }
+
+        _logger.LogWarning(
+            "Blazor route component {ComponentType} has no unique route template. Denying access.",
+            routeData.PageType.FullName);
+        key = string.Empty;
+        return false;
+    }
+
+    private bool TryResolveHubPermissionKey(HubInvocationContext hubInvocation, out string key)
+    {
+        var hubName = hubInvocation.Hub.GetType().Name;
+        if (hubName.EndsWith("Hub", StringComparison.Ordinal))
+        {
+            hubName = hubName[..^3];
+        }
+
+        key = AutoPolicyPermissionKeyResolver.Resolve(
+            $"/SignalR/{hubName}/{hubInvocation.HubMethodName}",
+            _options.Value);
+        return true;
+    }
+
     private static HttpContext? ResolveHttpContext(AuthorizationHandlerContext context)
     {
         switch (context.Resource)
@@ -129,8 +253,18 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
                 return httpContext;
             case AuthorizationFilterContext filterContext:
                 return filterContext.HttpContext;
+            case HubInvocationContext hubInvocation:
+                return hubInvocation.Context.GetHttpContext();
             default:
                 return null;
         }
     }
+
+    private static string? GetAuthorizationResourceName(object? resource) =>
+        resource switch
+        {
+            BlazorRouteData routeData => routeData.PageType.FullName,
+            HubInvocationContext hubInvocation => hubInvocation.Hub.GetType().FullName,
+            _ => null
+        };
 }

@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -7,18 +9,18 @@ namespace AutoPolicy;
 
 internal sealed class AutoPolicyStartupValidator : IHostedService
 {
-    private readonly EndpointDataSource _endpointDataSource;
+    private readonly IReadOnlyCollection<EndpointDataSource> _endpointDataSources;
     private readonly PermissionRegistry _registry;
     private readonly IOptions<AutoPolicyOptions> _options;
     private readonly ILogger<AutoPolicyStartupValidator> _logger;
 
     public AutoPolicyStartupValidator(
-        EndpointDataSource endpointDataSource,
+        IEnumerable<EndpointDataSource> endpointDataSources,
         PermissionRegistry registry,
         IOptions<AutoPolicyOptions> options,
         ILogger<AutoPolicyStartupValidator> logger)
     {
-        _endpointDataSource = endpointDataSource;
+        _endpointDataSources = endpointDataSources.ToArray();
         _registry = registry;
         _options = options;
         _logger = logger;
@@ -26,13 +28,24 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _ = _endpointDataSource.Endpoints;
-
+        var endpoints = _endpointDataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .Distinct()
+            .ToArray();
         var options = _options.Value;
+        var discoveryErrors = new List<string>();
+
+        DiscoverEndpointPermissions(endpoints, options, discoveryErrors);
+
         var result = PermissionModelValidator.Validate(
             options.Model,
             _registry,
             strict: options.StrictValidation);
+
+        foreach (var error in discoveryErrors)
+        {
+            result.AddError(error);
+        }
 
         ValidateOverrides(options, result);
         ValidateAliases(options, result);
@@ -57,7 +70,7 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
 
         var registrations = _registry.GetAll();
         _logger.LogInformation(
-            "AutoPolicy registered {PermissionCount} permissions, {ProtectedPageCount} protected Razor Pages, {ExplicitPermissionCount} explicit capabilities, {DuplicateCount} duplicate keys, {WarningCount} validation warnings.",
+            "AutoPolicy registered {PermissionCount} permissions, {ProtectedEndpointCount} protected endpoints, {ExplicitPermissionCount} explicit capabilities, {DuplicateCount} duplicate keys, {WarningCount} validation warnings.",
             registrations.Count,
             registrations.Count(r => r.IsProtected),
             options.ExplicitPermissions.Count,
@@ -68,6 +81,73 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private void DiscoverEndpointPermissions(
+        IReadOnlyList<Endpoint> endpoints,
+        AutoPolicyOptions options,
+        ICollection<string> errors)
+    {
+        foreach (var endpoint in endpoints)
+        {
+            var metadata = endpoint.Metadata.GetMetadata<AutoPolicyMetadata>();
+            if (metadata is null && !options.EndpointsProtectedByDefault)
+            {
+                continue;
+            }
+
+            var permissionKey = metadata?.Key;
+            if (string.IsNullOrWhiteSpace(permissionKey)
+                && endpoint is RouteEndpoint routeEndpoint
+                && !string.IsNullOrWhiteSpace(routeEndpoint.RoutePattern.RawText))
+            {
+                try
+                {
+                    permissionKey = AutoPolicyRoutePattern.ToPermissionKey(routeEndpoint.RoutePattern.RawText);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add(
+                        $"AutoPolicy could not derive a permission key for endpoint '{endpoint.DisplayName}': {ex.Message}");
+                    continue;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(permissionKey))
+            {
+                errors.Add(
+                    $"AutoPolicy could not discover a permission key for endpoint '{endpoint.DisplayName}'. "
+                    + "Map a route endpoint or supply a key to RequireAutoPolicy(...).");
+                continue;
+            }
+
+            string canonicalKey;
+            try
+            {
+                canonicalKey = AutoPolicyPermissionKeyResolver.Resolve(permissionKey, options);
+            }
+            catch (Exception ex)
+            {
+                errors.Add(
+                    $"AutoPolicy could not resolve permission key '{permissionKey}' for endpoint "
+                    + $"'{endpoint.DisplayName}': {ex.Message}");
+                continue;
+            }
+
+            var isProtected = metadata?.IsProtected ?? true;
+            if (endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null
+                || AutoPolicyKeyFactory.MatchesAnonymousPattern(canonicalKey, options))
+            {
+                isProtected = false;
+            }
+
+            if (!_registry.Contains(canonicalKey))
+            {
+                _registry.TryAdd(
+                    new PermissionRegistration(canonicalKey, isProtected: isProtected),
+                    endpoint.DisplayName ?? "ASP.NET Core endpoint");
+            }
+        }
+    }
 
     private void ValidateOverrides(AutoPolicyOptions options, PermissionValidationResult result)
     {

@@ -2,11 +2,17 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using AutoPolicy;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
+builder.Services.AddRazorComponents();
+builder.Services.AddControllers();
+builder.Services.AddSignalR();
+builder.Services.AddGrpc();
+builder.Services.AddHealthChecks();
 builder.Services
     .AddAuthentication(TestAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
@@ -14,6 +20,8 @@ builder.Services
         _ => { });
 
 builder.Services.AddSingleton<IAutoPolicyAccessProvider, HeaderAutoPolicyAccessProvider>();
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy("NamedOnly", policy => policy.RequireAssertion(_ => true)));
 builder.Services.AddAutoPolicy(options =>
 {
     options.PermissionDeniedBehavior = PermissionDeniedBehavior.StatusCode403;
@@ -44,7 +52,27 @@ var app = builder.Build();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseAntiforgery();
 app.MapRazorPages();
+app.MapRazorComponents<AutoPolicy.TestApp.Components.ProbeApp>();
+app.MapControllers();
+app.MapHub<AutoPolicy.TestApp.Hubs.ProbeHub>("/hubs/probe");
+app.MapGrpcService<AutoPolicy.TestApp.Grpc.ProbeGrpcService>();
+app.MapStaticAssets();
+app.MapGet("/", () => Results.Ok("root"));
+app.MapGet("/api/analytics", () => Results.Ok("analytics"))
+    .RequireAutoPolicy();
+app.MapPost("/api/packages/upload", () => Results.Ok("uploaded"))
+    .RequireAutoPolicy("Dashboard.Packages.Upload");
+app.MapGet("/api/default-deny", () => Results.Ok("secured by fallback policy"));
+app.MapGet("/api/optional/{id?}", (string? id) => Results.Ok(id ?? "none"));
+app.MapGet("/api/files/{*path}", (string? path) => Results.Ok(path ?? "none"));
+app.MapGet("/api/named-policy", () => Results.Ok("secured by named policy"))
+    .RequireAuthorization("NamedOnly");
+app.MapGet("/api/public", () => Results.Ok("anonymous")).AllowAnonymous();
+var groupedApi = app.MapGroup("/api/grouped");
+groupedApi.MapGet("/probe", () => Results.Ok("grouped endpoint"));
+app.MapHealthChecks("/health");
 
 app.Run();
 

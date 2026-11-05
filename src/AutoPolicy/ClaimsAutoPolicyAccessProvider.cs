@@ -6,7 +6,7 @@ namespace AutoPolicy;
 /// <summary>
 /// Built-in access provider that maps authenticated <see cref="ClaimsPrincipal"/> claims to AutoPolicy access.
 /// </summary>
-public sealed class ClaimsAutoPolicyAccessProvider : IAutoPolicyAccessProvider
+public sealed class ClaimsAutoPolicyAccessProvider : IAutoPolicyAccessProvider, IAutoPolicyPrincipalAccessProvider
 {
     /// <summary>
     /// Default claim type used for allowed groups.
@@ -58,9 +58,17 @@ public sealed class ClaimsAutoPolicyAccessProvider : IAutoPolicyAccessProvider
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
+        return GetAccessAsync(context.User, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public ValueTask<AutoPolicyAccess> GetAccessAsync(
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
         _ = cancellationToken;
 
-        var user = context.User;
         if (!user.Identities.Any(static identity => identity.IsAuthenticated))
         {
             return ValueTask.FromResult(AutoPolicyAccess.Empty);

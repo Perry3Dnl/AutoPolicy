@@ -8,8 +8,8 @@
     <AssemblyName>AutoPolicy</AssemblyName>
     <PackageId>AutoPolicy</PackageId>
     <Version>$(AutoPolicyVersion)</Version>
-    <Description>Automatic, default-deny route permissions for ASP.NET Core Razor Pages.</Description>
-    <PackageTags>aspnetcore;authorization;razorpages;permissions;policy</PackageTags>
+    <Description>Automatic, default-deny permissions for ASP.NET Core Razor Pages, endpoint-routed requests, SignalR hubs, and server-side Blazor routes.</Description>
+    <PackageTags>aspnetcore;authorization;razorpages;minimalapi;grpc;staticassets;signalr;blazor;permissions;policy</PackageTags>
     <IsPackable>true</IsPackable>
     <PackageReadmeFile>README.NUGET.md</PackageReadmeFile>
     <PackageIcon>autopolicy-icon.png</PackageIcon>

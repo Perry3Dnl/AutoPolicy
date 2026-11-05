@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option csharp_namespace = "AutoPolicy.TestApp.Grpc";
+package test;
+
+service Probe {
+  rpc Get (ProbeRequest) returns (ProbeReply);
+}
+
+message ProbeRequest {
+  string value = 1;
+}
+
+message ProbeReply {
+  string value = 1;
+}

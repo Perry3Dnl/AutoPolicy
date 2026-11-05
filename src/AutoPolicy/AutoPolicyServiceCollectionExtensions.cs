@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -13,8 +14,9 @@ namespace AutoPolicy;
 public static class AutoPolicyServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds automatic Razor Page permission discovery, authorization handling, startup validation,
-    /// in-page permission services, and the built-in claims access provider fallback.
+    /// Adds automatic Razor Page discovery, default authorization for endpoint-routed requests and
+    /// SignalR hub methods, startup validation, in-page permission services, and the built-in claims
+    /// access provider fallback.
     /// </summary>
     /// <remarks>
     /// Register a custom <see cref="IAutoPolicyAccessProvider"/> before calling this method when the
@@ -59,6 +61,8 @@ public static class AutoPolicyServiceCollectionExtensions
         services.TryAddScoped<IAutoPolicyAccessProvider, ClaimsAutoPolicyAccessProvider>();
 
         services.AddTransient<IAuthorizationHandler, AutoPolicyHandler>();
+        services.TryAddScoped<AutoPolicyHubFilter>();
+        services.Configure<HubOptions>(options => options.AddFilter<AutoPolicyHubFilter>());
         services.AddAuthorization(options =>
         {
             options.AddPolicy(AutoPolicyDefaults.PolicyName, policy =>
@@ -67,12 +71,64 @@ public static class AutoPolicyServiceCollectionExtensions
             });
         });
 
+        DecorateAuthorizationPolicyProvider(services);
         DecorateAuthorizationResultHandler(services);
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IPageApplicationModelProvider, AutoPolicyPageApplicationModelProvider>());
         services.AddHostedService<AutoPolicyStartupValidator>();
         return services;
+    }
+
+    private static void DecorateAuthorizationPolicyProvider(IServiceCollection services)
+    {
+        var existing = services.LastOrDefault(descriptor =>
+            descriptor.ServiceType == typeof(IAuthorizationPolicyProvider)
+            && !descriptor.IsKeyedService);
+
+        if (existing is not null)
+        {
+            services.Remove(existing);
+        }
+
+        var lifetime = existing?.Lifetime ?? ServiceLifetime.Singleton;
+        services.Add(ServiceDescriptor.Describe(
+            typeof(IAuthorizationPolicyProvider),
+            serviceProvider => new AutoPolicyAuthorizationPolicyProvider(
+                ResolveAuthorizationPolicyProvider(existing, serviceProvider),
+                serviceProvider.GetRequiredService<IOptions<AutoPolicyOptions>>()),
+            lifetime));
+    }
+
+    private static IAuthorizationPolicyProvider ResolveAuthorizationPolicyProvider(
+        ServiceDescriptor? descriptor,
+        IServiceProvider serviceProvider)
+    {
+        if (descriptor is null)
+        {
+            return new DefaultAuthorizationPolicyProvider(
+                serviceProvider.GetRequiredService<IOptions<AuthorizationOptions>>());
+        }
+
+        if (descriptor.ImplementationInstance is IAuthorizationPolicyProvider instance)
+        {
+            return instance;
+        }
+
+        if (descriptor.ImplementationFactory is not null)
+        {
+            return (IAuthorizationPolicyProvider)descriptor.ImplementationFactory(serviceProvider);
+        }
+
+        if (descriptor.ImplementationType is not null)
+        {
+            return (IAuthorizationPolicyProvider)ActivatorUtilities.GetServiceOrCreateInstance(
+                serviceProvider,
+                descriptor.ImplementationType);
+        }
+
+        throw new InvalidOperationException(
+            "The existing IAuthorizationPolicyProvider registration could not be decorated.");
     }
 
     private static void DecorateAuthorizationResultHandler(IServiceCollection services)
