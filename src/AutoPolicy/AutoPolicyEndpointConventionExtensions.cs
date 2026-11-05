@@ -36,7 +36,14 @@ public static class AutoPolicyEndpointConventionExtensions
 
         builder.Add(endpointBuilder =>
         {
-            endpointBuilder.Metadata.Add(new AutoPolicyMetadata(normalizedKey));
+            var endpointPermissionKey = normalizedKey;
+            if (endpointPermissionKey is null
+                && endpointBuilder is RouteEndpointBuilder routeEndpointBuilder)
+            {
+                endpointPermissionKey = routeEndpointBuilder.RoutePattern.RawText;
+            }
+
+            endpointBuilder.Metadata.Add(new AutoPolicyMetadata(endpointPermissionKey));
             endpointBuilder.Metadata.Add(new AuthorizeAttribute(AutoPolicyDefaults.PolicyName));
         });
 
