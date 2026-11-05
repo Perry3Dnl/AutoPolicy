@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
@@ -34,7 +35,7 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
         var options = _options.Value;
         var discoveryErrors = new List<string>();
 
-        DiscoverMinimalApiPermissions(endpoints, options, discoveryErrors);
+        DiscoverEndpointPermissions(endpoints, options, discoveryErrors);
 
         var result = PermissionModelValidator.Validate(
             options.Model,
@@ -81,7 +82,7 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    private void DiscoverMinimalApiPermissions(
+    private void DiscoverEndpointPermissions(
         IReadOnlyList<Endpoint> endpoints,
         AutoPolicyOptions options,
         ICollection<string> errors)
@@ -89,23 +90,33 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
         foreach (var endpoint in endpoints)
         {
             var metadata = endpoint.Metadata.GetMetadata<AutoPolicyMetadata>();
-            if (metadata is null)
+            if (metadata is null && !options.EndpointsProtectedByDefault)
             {
                 continue;
             }
 
-            var permissionKey = metadata.Key;
+            var permissionKey = metadata?.Key;
             if (string.IsNullOrWhiteSpace(permissionKey)
-                && endpoint is RouteEndpoint routeEndpoint)
+                && endpoint is RouteEndpoint routeEndpoint
+                && !string.IsNullOrWhiteSpace(routeEndpoint.RoutePattern.RawText))
             {
-                permissionKey = routeEndpoint.RoutePattern.RawText;
+                try
+                {
+                    permissionKey = AutoPolicyRoutePattern.ToPermissionKey(routeEndpoint.RoutePattern.RawText);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add(
+                        $"AutoPolicy could not derive a permission key for endpoint '{endpoint.DisplayName}': {ex.Message}");
+                    continue;
+                }
             }
 
             if (string.IsNullOrWhiteSpace(permissionKey))
             {
                 errors.Add(
                     $"AutoPolicy could not discover a permission key for endpoint '{endpoint.DisplayName}'. "
-                    + "Supply a permission key to RequireAutoPolicy(...).");
+                    + "Map a route endpoint or supply a key to RequireAutoPolicy(...).");
                 continue;
             }
 
@@ -122,14 +133,18 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
                 continue;
             }
 
+            var isProtected = metadata?.IsProtected ?? true;
+            if (endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null
+                || AutoPolicyKeyFactory.MatchesAnonymousPattern(canonicalKey, options))
+            {
+                isProtected = false;
+            }
+
             if (!_registry.Contains(canonicalKey))
             {
                 _registry.TryAdd(
-                    new PermissionRegistration(
-                        canonicalKey,
-                        relativePath: endpoint.DisplayName,
-                        isProtected: true),
-                    endpoint.DisplayName ?? "Minimal API endpoint");
+                    new PermissionRegistration(canonicalKey, isProtected: isProtected),
+                    endpoint.DisplayName ?? "ASP.NET Core endpoint");
             }
         }
     }
