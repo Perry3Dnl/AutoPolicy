@@ -7,6 +7,8 @@ using Microsoft.Extensions.Options;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
+builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services
     .AddAuthentication(TestAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
@@ -47,6 +49,8 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapRazorPages();
+app.MapControllers();
+app.MapHub<AutoPolicy.TestApp.Hubs.ProbeHub>("/hubs/probe");
 app.MapGet("/api/analytics", () => Results.Ok("analytics"))
     .RequireAutoPolicy();
 app.MapPost("/api/packages/upload", () => Results.Ok("uploaded"))
