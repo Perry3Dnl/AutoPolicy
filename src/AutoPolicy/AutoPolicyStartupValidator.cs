@@ -8,18 +8,18 @@ namespace AutoPolicy;
 
 internal sealed class AutoPolicyStartupValidator : IHostedService
 {
-    private readonly EndpointDataSource _endpointDataSource;
+    private readonly IReadOnlyCollection<EndpointDataSource> _endpointDataSources;
     private readonly PermissionRegistry _registry;
     private readonly IOptions<AutoPolicyOptions> _options;
     private readonly ILogger<AutoPolicyStartupValidator> _logger;
 
     public AutoPolicyStartupValidator(
-        EndpointDataSource endpointDataSource,
+        IEnumerable<EndpointDataSource> endpointDataSources,
         PermissionRegistry registry,
         IOptions<AutoPolicyOptions> options,
         ILogger<AutoPolicyStartupValidator> logger)
     {
-        _endpointDataSource = endpointDataSource;
+        _endpointDataSources = endpointDataSources.ToArray();
         _registry = registry;
         _options = options;
         _logger = logger;
@@ -27,7 +27,10 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        var endpoints = _endpointDataSource.Endpoints;
+        var endpoints = _endpointDataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .Distinct()
+            .ToArray();
         var options = _options.Value;
         var discoveryErrors = new List<string>();
 
