@@ -1,0 +1,11 @@
+@namespace AutoPolicy.TestApp.Components
+@using Microsoft.AspNetCore.Components.Routing
+
+<Router AppAssembly="typeof(ProbeApp).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" />
+    </Found>
+    <NotFound>
+        <p>Not found.</p>
+    </NotFound>
+</Router>
