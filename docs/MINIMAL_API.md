@@ -69,6 +69,8 @@ A streaming RPC is authorized when its call starts. If permission must be rechec
 Static files mapped with `MapStaticAssets()` are endpoint-routed and receive default AutoPolicy protection. Grant their route permissions or mark the static asset endpoints anonymous when the assets are public:
 
 ```csharp
+using Microsoft.AspNetCore.Authorization;
+
 app.MapStaticAssets().Add(endpointBuilder =>
     endpointBuilder.Metadata.Add(new AllowAnonymousAttribute()));
 ```
