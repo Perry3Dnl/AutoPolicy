@@ -53,5 +53,10 @@ public sealed class MinimalApiAuthorizationTests : IClassFixture<WebApplicationF
 
         var registry = _factory.Services.GetRequiredService<IPermissionRegistry>();
         Assert.Contains("/api/default-deny", registry.Keys, StringComparer.OrdinalIgnoreCase);
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/named-policy")).StatusCode);
+        using var namedPolicyGrant = new HttpRequestMessage(HttpMethod.Get, "/api/named-policy");
+        namedPolicyGrant.Headers.Add("X-AutoPolicy-Allow", "/api/named-policy");
+        Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(namedPolicyGrant)).StatusCode);
     }
 }
