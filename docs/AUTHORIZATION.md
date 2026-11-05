@@ -37,7 +37,7 @@ Areas/BackOffice/Pages/Dashboard.cshtml
 
 ### Other ASP.NET Core surfaces
 
-Requests routed through ASP.NET Core authorization use endpoint route patterns as permission keys. This includes MVC, Minimal APIs, Razor Components static SSR routes, gRPC RPCs, mapped static assets, and SignalR connection endpoints. Listening ports and HTTP methods aren't part of those permission keys, so the same route permission applies to that route on each listener and for each HTTP method. Use `RequireAutoPolicy(...)` when an operation needs a separate capability key.
+Requests routed through ASP.NET Core authorization use endpoint route patterns as permission keys. This includes MVC, Minimal APIs, Razor Components static SSR routes, gRPC RPCs, mapped static assets, and SignalR connection endpoints. Listening ports and HTTP methods aren't part of those permission keys, so the same route permission applies to that route on each listener and for each HTTP method. Optional and catch-all route markers are normalized away; for example, `/items/{id?}` and `/files/{*path}` become `/items/{id}` and `/files/{path}`. Use `RequireAutoPolicy(...)` when an operation needs a separate capability key.
 
 SignalR hub methods receive separate `/SignalR/{Hub}/{Method}` permissions. Interactive server-side Blazor navigation runs through the component router: add `[Authorize]` in the app's `_Imports.razor` and pass route data to `AuthorizeRouteView` to protect routed components. Custom providers used for component authorization should implement `IAutoPolicyPrincipalAccessProvider`.
 
