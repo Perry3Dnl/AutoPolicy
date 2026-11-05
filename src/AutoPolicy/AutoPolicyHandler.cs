@@ -52,6 +52,12 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
             return;
         }
 
+        if (AutoPolicyKeyFactory.MatchesAnonymousPattern(key, _options.Value))
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
         if (!_registry.Contains(key)
             && string.IsNullOrWhiteSpace(requirement.PermissionKey)
             && _options.Value.EndpointsProtectedByDefault
