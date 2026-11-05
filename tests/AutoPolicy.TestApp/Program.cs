@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
+builder.Services.AddRazorComponents();
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddGrpc();
@@ -50,7 +51,9 @@ var app = builder.Build();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseAntiforgery();
 app.MapRazorPages();
+app.MapRazorComponents<AutoPolicy.TestApp.Components.ProbeApp>();
 app.MapControllers();
 app.MapHub<AutoPolicy.TestApp.Hubs.ProbeHub>("/hubs/probe");
 app.MapGrpcService<AutoPolicy.TestApp.Grpc.ProbeGrpcService>();
