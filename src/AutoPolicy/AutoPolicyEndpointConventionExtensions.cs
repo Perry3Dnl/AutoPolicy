@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 namespace AutoPolicy;
 
 /// <summary>
-/// Adds AutoPolicy authorization metadata to Minimal API endpoints and route groups.
+/// Adds AutoPolicy authorization metadata to ASP.NET Core endpoint convention builders.
 /// </summary>
 public static class AutoPolicyEndpointConventionExtensions
 {
