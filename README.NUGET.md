@@ -69,7 +69,7 @@ Omit the key to use the endpoint route pattern as its permission key:
 app.MapGet("/analytics", GetAnalytics).RequireAutoPolicy();
 ```
 
-See [Minimal API authorization](https://github.com/Perry3Dnl/AutoPolicy/blob/main/docs/MINIMAL_API.md) for details.
+All endpoints are protected by default through ASP.NET Core's authorization fallback policy. Their route patterns become permission keys; use `.AllowAnonymous()` for public endpoints. See [Minimal API authorization](https://github.com/Perry3Dnl/AutoPolicy/blob/main/docs/MINIMAL_API.md) for details.
 
 ## Bring your own permission storage
 
