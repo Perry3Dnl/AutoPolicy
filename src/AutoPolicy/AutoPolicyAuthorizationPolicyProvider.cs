@@ -38,7 +38,7 @@ internal sealed class AutoPolicyAuthorizationPolicyProvider : IAuthorizationPoli
         AuthorizationPolicy? policy,
         bool createIfMissing)
     {
-        if (!_options.Value.MinimalApisProtectedByDefault)
+        if (!_options.Value.EndpointsProtectedByDefault)
         {
             return policy;
         }
