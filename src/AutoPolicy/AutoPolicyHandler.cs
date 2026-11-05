@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -106,9 +107,16 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
             }
 
             var metadata = httpContext.GetEndpoint()?.Metadata.GetMetadata<AutoPolicyMetadata>();
-            if (metadata is not null)
+            var endpointKey = metadata?.Key;
+            if (string.IsNullOrWhiteSpace(endpointKey)
+                && httpContext.GetEndpoint() is RouteEndpoint routeEndpoint)
             {
-                key = AutoPolicyPermissionKeyResolver.Resolve(metadata.Key, _options.Value);
+                endpointKey = routeEndpoint.RoutePattern.RawText;
+            }
+
+            if (!string.IsNullOrWhiteSpace(endpointKey))
+            {
+                key = AutoPolicyPermissionKeyResolver.Resolve(endpointKey, _options.Value);
                 return true;
             }
         }
