@@ -26,7 +26,7 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _ = _endpointDataSource.Endpoints;
+        var endpoints = _endpointDataSource.Endpoints;
 
         var options = _options.Value;
         var result = PermissionModelValidator.Validate(
@@ -34,6 +34,7 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
             _registry,
             strict: options.StrictValidation);
 
+        DiscoverMinimalApiPermissions(endpoints, options, result);
         ValidateOverrides(options, result);
         ValidateAliases(options, result);
 
@@ -57,7 +58,7 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
 
         var registrations = _registry.GetAll();
         _logger.LogInformation(
-            "AutoPolicy registered {PermissionCount} permissions, {ProtectedPageCount} protected Razor Pages, {ExplicitPermissionCount} explicit capabilities, {DuplicateCount} duplicate keys, {WarningCount} validation warnings.",
+            "AutoPolicy registered {PermissionCount} permissions, {ProtectedEndpointCount} protected endpoints, {ExplicitPermissionCount} explicit capabilities, {DuplicateCount} duplicate keys, {WarningCount} validation warnings.",
             registrations.Count,
             registrations.Count(r => r.IsProtected),
             options.ExplicitPermissions.Count,
@@ -68,6 +69,59 @@ internal sealed class AutoPolicyStartupValidator : IHostedService
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private void DiscoverMinimalApiPermissions(
+        IReadOnlyList<Endpoint> endpoints,
+        AutoPolicyOptions options,
+        PermissionValidationResult result)
+    {
+        foreach (var endpoint in endpoints)
+        {
+            var metadata = endpoint.Metadata.GetMetadata<AutoPolicyMetadata>();
+            if (metadata is null)
+            {
+                continue;
+            }
+
+            var permissionKey = metadata.Key;
+            if (string.IsNullOrWhiteSpace(permissionKey)
+                && endpoint is RouteEndpoint routeEndpoint)
+            {
+                permissionKey = routeEndpoint.RoutePattern.RawText;
+            }
+
+            if (string.IsNullOrWhiteSpace(permissionKey))
+            {
+                result.AddError(
+                    $"AutoPolicy could not discover a permission key for endpoint '{endpoint.DisplayName}'. "
+                    + "Supply a permission key to RequireAutoPolicy(...).");
+                continue;
+            }
+
+            string canonicalKey;
+            try
+            {
+                canonicalKey = AutoPolicyPermissionKeyResolver.Resolve(permissionKey, options);
+            }
+            catch (Exception ex)
+            {
+                result.AddError(
+                    $"AutoPolicy could not resolve permission key '{permissionKey}' for endpoint "
+                    + $"'{endpoint.DisplayName}': {ex.Message}");
+                continue;
+            }
+
+            if (!_registry.Contains(canonicalKey))
+            {
+                _registry.TryAdd(
+                    new PermissionRegistration(
+                        canonicalKey,
+                        relativePath: endpoint.DisplayName,
+                        isProtected: true),
+                    endpoint.DisplayName ?? "Minimal API endpoint");
+            }
+        }
+    }
 
     private void ValidateOverrides(AutoPolicyOptions options, PermissionValidationResult result)
     {
