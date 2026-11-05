@@ -61,4 +61,28 @@ public sealed class RouteTemplateAuthorizationTests : IClassFixture<WebApplicati
         allowed.Headers.Add("X-AutoPolicy-Allow", "/api/files/{path}");
         Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(allowed)).StatusCode);
     }
+
+    [Fact]
+    public async Task RouteGroupEndpoints_AreProtectedByDefault()
+    {
+        using var client = _factory.CreateClient();
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/grouped/probe")).StatusCode);
+
+        using var allowed = new HttpRequestMessage(HttpMethod.Get, "/api/grouped/probe");
+        allowed.Headers.Add("X-AutoPolicy-Allow", "/api/grouped/probe");
+        Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(allowed)).StatusCode);
+    }
+
+    [Fact]
+    public async Task HealthCheckEndpoints_AreProtectedByDefault()
+    {
+        using var client = _factory.CreateClient();
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/health")).StatusCode);
+
+        using var allowed = new HttpRequestMessage(HttpMethod.Get, "/health");
+        allowed.Headers.Add("X-AutoPolicy-Allow", "/health");
+        Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(allowed)).StatusCode);
+    }
 }
