@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http;
@@ -233,7 +234,7 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
         var hubName = hubInvocation.Hub.GetType().Name;
         if (hubName.EndsWith("Hub", StringComparison.Ordinal))
         {
-            hubName = hubName[..^"Hub".Length];
+            hubName = hubName[..^3];
         }
 
         key = AutoPolicyPermissionKeyResolver.Resolve(
