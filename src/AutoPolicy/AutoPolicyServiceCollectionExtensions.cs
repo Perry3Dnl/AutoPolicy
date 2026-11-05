@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -59,6 +60,8 @@ public static class AutoPolicyServiceCollectionExtensions
         services.TryAddScoped<IAutoPolicyAccessProvider, ClaimsAutoPolicyAccessProvider>();
 
         services.AddTransient<IAuthorizationHandler, AutoPolicyHandler>();
+        services.TryAddScoped<AutoPolicyHubFilter>();
+        services.Configure<HubOptions>(options => options.AddFilter<AutoPolicyHubFilter>());
         services.AddAuthorization(options =>
         {
             options.AddPolicy(AutoPolicyDefaults.PolicyName, policy =>
