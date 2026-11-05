@@ -18,6 +18,7 @@ public sealed class PublicApiSurfaceTests
             "AutoPolicy.ClaimsPermissionOptions",
             "AutoPolicy.HttpContextPermissionExtensions",
             "AutoPolicy.IAutoPolicyAccessProvider",
+            "AutoPolicy.IAutoPolicyPrincipalAccessProvider",
             "AutoPolicy.IPermissionRegistry",
             "AutoPolicy.PageModelPermissionExtensions",
             "AutoPolicy.PermissionDeniedBehavior",
