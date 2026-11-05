@@ -17,7 +17,7 @@ internal sealed class AutoPolicyHubFilter : IHubFilter
         Func<HubInvocationContext, ValueTask<object?>> next)
     {
         var result = await _authorizationService.AuthorizeAsync(
-            invocationContext.Context.User,
+            invocationContext.Context.User ?? new System.Security.Claims.ClaimsPrincipal(),
             invocationContext,
             AutoPolicyDefaults.PolicyName).ConfigureAwait(false);
 
