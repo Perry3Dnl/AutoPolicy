@@ -79,7 +79,7 @@ public static class AutoPolicyEndpointConventionExtensions
                     canonicalKey,
                     relativePath: endpointBuilder.DisplayName,
                     isProtected: true),
-                endpointBuilder.DisplayName ?? "Minimal API endpoint");
+                endpointBuilder.DisplayName ?? "ASP.NET Core endpoint");
         }
     }
 }
