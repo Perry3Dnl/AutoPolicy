@@ -16,6 +16,14 @@ internal sealed class AutoPolicyHubFilter : IHubFilter
         HubInvocationContext invocationContext,
         Func<HubInvocationContext, ValueTask<object?>> next)
     {
+        var endpoint = invocationContext.Context.GetHttpContext()?.GetEndpoint();
+        if (endpoint?.Metadata.GetMetadata<IAllowAnonymous>() is not null
+            || invocationContext.HubMethod.IsDefined(typeof(AllowAnonymousAttribute), inherit: true)
+            || invocationContext.Hub.GetType().IsDefined(typeof(AllowAnonymousAttribute), inherit: true))
+        {
+            return await next(invocationContext).ConfigureAwait(false);
+        }
+
         var result = await _authorizationService.AuthorizeAsync(
             invocationContext.Context.User ?? new System.Security.Claims.ClaimsPrincipal(),
             invocationContext,
