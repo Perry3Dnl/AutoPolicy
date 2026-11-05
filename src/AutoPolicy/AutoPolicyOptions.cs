@@ -115,7 +115,7 @@ public sealed class AutoPolicyOptions
             {
                 throw new ArgumentException(
                     "The match-all '*' pattern cannot be used with AllowAnonymous. "
-                    + "Use ProtectRazorPagesByDefault(false) for an intentional global opt-out.",
+                    + "Use ProtectRazorPagesByDefault(false) and ProtectEndpointsByDefault(false) to opt out by request type.",
                     nameof(patterns));
             }
 
