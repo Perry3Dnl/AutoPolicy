@@ -58,6 +58,7 @@ app.MapControllers();
 app.MapHub<AutoPolicy.TestApp.Hubs.ProbeHub>("/hubs/probe");
 app.MapGrpcService<AutoPolicy.TestApp.Grpc.ProbeGrpcService>();
 app.MapStaticAssets();
+app.MapGet("/", () => Results.Ok("root"));
 app.MapGet("/api/analytics", () => Results.Ok("analytics"))
     .RequireAutoPolicy();
 app.MapPost("/api/packages/upload", () => Results.Ok("uploaded"))
