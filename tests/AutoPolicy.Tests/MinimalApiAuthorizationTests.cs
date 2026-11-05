@@ -35,6 +35,6 @@ public sealed class MinimalApiAuthorizationTests : IClassFixture<WebApplicationF
 
         var registry = _factory.Services.GetRequiredService<IPermissionRegistry>();
         Assert.Contains("/api/analytics", registry.Keys, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("Dashboard.Packages.Upload", registry.Keys, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("/Dashboard.Packages.Upload", registry.Keys, StringComparer.OrdinalIgnoreCase);
     }
 }
