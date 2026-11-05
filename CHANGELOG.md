@@ -4,6 +4,17 @@ All notable changes to AutoPolicy are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Default-deny authorization for ASP.NET Core endpoint-routed requests, including MVC, Minimal APIs, gRPC RPCs, mapped static assets, and SignalR connections and hub methods.
+- Interactive server-side Blazor route authorization through the standard route view and principal-based access provider.
+- Integration coverage for MVC, Blazor routes, gRPC calls, SignalR hub invocations, and mapped static assets.
+
+### Changed
+
+- Endpoint permission keys are discovered from route patterns by default; explicit AutoPolicy endpoint keys remain available for capability-level permissions.
+- Documentation now describes endpoint middleware boundaries, static asset behavior, Blazor routing setup, and package installation for the current version.
+
 ## [0.1.2] - 2026-09-11
 
 ### Changed
