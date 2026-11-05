@@ -182,7 +182,7 @@ Bare `AllowAnonymous("*")` is rejected. For an intentional opt-in model:
 options.ProtectRazorPagesByDefault(false);
 ```
 
-Then add `[AutoPolicy]` to specific PageModels that should be protected.
+Then add `[AutoPolicy]` to specific PageModels that should be protected. For endpoint-routed requests, `ProtectEndpointsByDefault(false)` is a separate switch; selected endpoints can opt back in with `RequireAutoPolicy(...)`.
 
 ## Permission-denied behavior
 
