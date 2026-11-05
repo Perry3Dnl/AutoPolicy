@@ -40,6 +40,18 @@ public sealed class MinimalApiAuthorizationTests : IClassFixture<WebApplicationF
     }
 
     [Fact]
+    public async Task MvcEndpoints_AreProtectedByDefault()
+    {
+        using var client = _factory.CreateClient();
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/mvc/probe")).StatusCode);
+
+        using var allowed = new HttpRequestMessage(HttpMethod.Get, "/mvc/probe");
+        allowed.Headers.Add("X-AutoPolicy-Allow", "/mvc/probe");
+        Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(allowed)).StatusCode);
+    }
+
+    [Fact]
     public async Task UnmarkedMinimalApiEndpoints_AreProtectedByDefault_AndAllowAnonymousRemainsPublic()
     {
         using var client = _factory.CreateClient();
