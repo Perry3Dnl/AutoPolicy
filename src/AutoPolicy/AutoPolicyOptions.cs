@@ -42,6 +42,16 @@ public sealed class AutoPolicyOptions
     public bool RazorPagesProtectedByDefault { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets whether ASP.NET Core endpoints without an explicit authorization policy are protected
+    /// with AutoPolicy by default. The default is <see langword="true"/>.
+    /// </summary>
+    /// <remarks>
+    /// Use standard ASP.NET Core <c>AllowAnonymous</c> metadata for public endpoints. This setting is
+    /// independent of <see cref="RazorPagesProtectedByDefault"/>.
+    /// </remarks>
+    public bool MinimalApisProtectedByDefault { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets whether stale exact permission references and wildcard patterns that match no registered permission
     /// are startup errors instead of warnings.
     /// </summary>
@@ -69,6 +79,17 @@ public sealed class AutoPolicyOptions
     public AutoPolicyOptions ProtectRazorPagesByDefault(bool enabled = true)
     {
         RazorPagesProtectedByDefault = enabled;
+        return this;
+    }
+
+    /// <summary>
+    /// Enables or disables default AutoPolicy protection for ASP.NET Core endpoints.
+    /// </summary>
+    /// <param name="enabled"><see langword="true"/> to protect endpoints by default; otherwise <see langword="false"/>.</param>
+    /// <returns>The same options instance for fluent configuration.</returns>
+    public AutoPolicyOptions ProtectMinimalApisByDefault(bool enabled = true)
+    {
+        MinimalApisProtectedByDefault = enabled;
         return this;
     }
 
