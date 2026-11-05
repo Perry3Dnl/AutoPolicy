@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using AutoPolicy;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
+builder.Services.AddGrpc();
 builder.Services
     .AddAuthentication(TestAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
@@ -51,6 +53,8 @@ app.UseAuthorization();
 app.MapRazorPages();
 app.MapControllers();
 app.MapHub<AutoPolicy.TestApp.Hubs.ProbeHub>("/hubs/probe");
+app.MapGrpcService<AutoPolicy.TestApp.Grpc.ProbeGrpcService>();
+app.MapStaticAssets();
 app.MapGet("/api/analytics", () => Results.Ok("analytics"))
     .RequireAutoPolicy();
 app.MapPost("/api/packages/upload", () => Results.Ok("uploaded"))
