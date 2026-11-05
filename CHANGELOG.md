@@ -12,7 +12,7 @@ All notable changes to AutoPolicy are documented in this file.
 
 ### Changed
 
-- Endpoint permission keys are discovered from route patterns by default; explicit AutoPolicy endpoint keys remain available for capability-level permissions.
+- Endpoint permission keys use route patterns, with optional and catch-all markers normalized for stable identities; explicit AutoPolicy endpoint keys remain available for capability-level permissions.
 - Documentation now describes endpoint middleware boundaries, static asset behavior, Blazor routing setup, and package installation for the current version.
 
 ## [0.1.2] - 2026-09-11
