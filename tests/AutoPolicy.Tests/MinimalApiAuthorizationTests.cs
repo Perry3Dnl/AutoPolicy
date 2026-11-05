@@ -18,6 +18,9 @@ public sealed class MinimalApiAuthorizationTests : IClassFixture<WebApplicationF
     public async Task MinimalApiEndpoints_AreDiscoveredAndDeniedWithoutMatchingPermission()
     {
         using var client = _factory.CreateClient();
+        var registry = _factory.Services.GetRequiredService<IPermissionRegistry>();
+        Assert.Contains("/api/analytics", registry.Keys, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("/Dashboard.Packages.Upload", registry.Keys, StringComparer.OrdinalIgnoreCase);
 
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/analytics")).StatusCode);
 
@@ -33,8 +36,6 @@ public sealed class MinimalApiAuthorizationTests : IClassFixture<WebApplicationF
         allowedExplicitPermission.Headers.Add("X-AutoPolicy-Allow", "Dashboard.Packages.Upload");
         Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(allowedExplicitPermission)).StatusCode);
 
-        var registry = _factory.Services.GetRequiredService<IPermissionRegistry>();
-        Assert.Contains("/api/analytics", registry.Keys, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("/Dashboard.Packages.Upload", registry.Keys, StringComparer.OrdinalIgnoreCase);
+
     }
 }
