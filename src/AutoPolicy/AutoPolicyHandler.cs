@@ -225,12 +225,6 @@ internal sealed class AutoPolicyHandler : AuthorizationHandler<AutoPolicyRequire
 
     private bool TryResolveHubPermissionKey(HubInvocationContext hubInvocation, out string key)
     {
-        var httpContext = hubInvocation.Context.GetHttpContext();
-        if (httpContext is not null && TryResolveHttpPermissionKey(httpContext, out key))
-        {
-            return true;
-        }
-
         var hubName = hubInvocation.Hub.GetType().Name;
         if (hubName.EndsWith("Hub", StringComparison.Ordinal))
         {
