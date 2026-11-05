@@ -16,14 +16,14 @@ public sealed class RouteTemplateAuthorizationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
-    public async Task UnmarkedEndpoints_AreRegisteredAtStartup()
+    public async Task UnmarkedEndpoints_AreDiscoveredAndRegisteredWhenAuthorized()
     {
         using var client = _factory.CreateClient();
         var registry = _factory.Services.GetRequiredService<IPermissionRegistry>();
 
+        Assert.DoesNotContain("/api/default-deny", registry.Keys, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/default-deny")).StatusCode);
         Assert.Contains("/api/default-deny", registry.Keys, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("/api/optional/{id}", registry.Keys, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("/api/files/{path}", registry.Keys, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]
