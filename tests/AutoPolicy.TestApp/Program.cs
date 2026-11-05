@@ -45,6 +45,10 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapRazorPages();
+app.MapGet("/api/analytics", () => Results.Ok("analytics"))
+    .RequireAutoPolicy();
+app.MapPost("/api/packages/upload", () => Results.Ok("uploaded"))
+    .RequireAutoPolicy("Dashboard.Packages.Upload");
 
 app.Run();
 
