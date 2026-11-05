@@ -14,6 +14,8 @@ builder.Services
         _ => { });
 
 builder.Services.AddSingleton<IAutoPolicyAccessProvider, HeaderAutoPolicyAccessProvider>();
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy("NamedOnly", policy => policy.RequireAssertion(_ => true)));
 builder.Services.AddAutoPolicy(options =>
 {
     options.PermissionDeniedBehavior = PermissionDeniedBehavior.StatusCode403;
@@ -50,6 +52,8 @@ app.MapGet("/api/analytics", () => Results.Ok("analytics"))
 app.MapPost("/api/packages/upload", () => Results.Ok("uploaded"))
     .RequireAutoPolicy("Dashboard.Packages.Upload");
 app.MapGet("/api/default-deny", () => Results.Ok("secured by fallback policy"));
+app.MapGet("/api/named-policy", () => Results.Ok("secured by named policy"))
+    .RequireAuthorization("NamedOnly");
 app.MapGet("/api/public", () => Results.Ok("anonymous")).AllowAnonymous();
 
 app.Run();
