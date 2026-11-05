@@ -11,6 +11,7 @@ public sealed class PublicApiSurfaceTests
         {
             "AutoPolicy.AutoPolicyAccess",
             "AutoPolicy.AutoPolicyAttribute",
+            "AutoPolicy.AutoPolicyEndpointConventionExtensions",
             "AutoPolicy.AutoPolicyOptions",
             "AutoPolicy.AutoPolicyServiceCollectionExtensions",
             "AutoPolicy.ClaimsAutoPolicyAccessProvider",
